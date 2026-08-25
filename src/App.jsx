@@ -137,6 +137,14 @@ function App() {
   const [authLoading, setAuthLoading] = useState(false)
 
   // =========================
+  // NAVIGATION
+  // =========================
+
+  const [activeTab, setActiveTab] = useState('game')
+  const [leaderboard, setLeaderboard] = useState([])
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false)
+
+  // =========================
   // GAME
   // =========================
 
@@ -153,36 +161,103 @@ function App() {
   const [decisionOpen, setDecisionOpen] = useState(false)
   const [decisionLocked, setDecisionLocked] = useState(false)
 
-  /*
-    decisions now stores BOTH:
-    action + quantity
-
-    Example:
-    {
-      sunvolt: { action: 'BUY', quantity: 10 },
-      robonext: { action: 'HOLD', quantity: 0 }
-    }
-  */
   const [decisions, setDecisions] = useState({})
 
   const [revealed, setRevealed] = useState(false)
   const [gameFinished, setGameFinished] = useState(false)
 
   // =========================
-  // LOAD PLAYER
+  // LOAD SAVED PLAYER
   // =========================
 
   useEffect(() => {
     const savedPlayer = localStorage.getItem('stockMarketPlayer')
 
-    if (savedPlayer) {
-      try {
-        setCurrentPlayer(JSON.parse(savedPlayer))
-      } catch {
+    if (!savedPlayer) return
+
+    try {
+      const parsedPlayer = JSON.parse(savedPlayer)
+
+      if (parsedPlayer?.id && parsedPlayer?.username) {
+        setCurrentPlayer(parsedPlayer)
+      } else {
         localStorage.removeItem('stockMarketPlayer')
       }
+    } catch {
+      localStorage.removeItem('stockMarketPlayer')
     }
   }, [])
+
+  // =========================
+  // LOAD LEADERBOARD
+  // =========================
+
+  const loadLeaderboard = async () => {
+    setLeaderboardLoading(true)
+
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id, username, score')
+        .order('score', { ascending: false })
+
+      if (error) {
+        console.error('Leaderboard error:', error)
+        setAuthMessage(`Leaderboard error: ${error.message}`)
+        return
+      }
+
+      setLeaderboard(data || [])
+    } catch (error) {
+      console.error('Leaderboard error:', error)
+
+      if (error?.message) {
+        setAuthMessage(`Leaderboard error: ${error.message}`)
+      }
+    } finally {
+      setLeaderboardLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'leaderboard' && currentPlayer) {
+      loadLeaderboard()
+    }
+  }, [activeTab, currentPlayer])
+
+  // =========================
+  // ACCOUNT HELPERS
+  // =========================
+
+  const showSupabaseError = (error, fallbackMessage) => {
+    console.error('Supabase error:', error)
+
+    if (!error) {
+      setAuthMessage(fallbackMessage)
+      return
+    }
+
+    if (error.code === '23505') {
+      setAuthMessage(
+        'That username already exists. Try a different username.'
+      )
+      return
+    }
+
+    if (error.code === '42501') {
+      setAuthMessage(
+        'Database permission blocked this action. Check the players table policies in Supabase.'
+      )
+      return
+    }
+
+    if (error.message) {
+      setAuthMessage(`Database error: ${error.message}`)
+      return
+    }
+
+    setAuthMessage(fallbackMessage)
+  }
 
   // =========================
   // CREATE ACCOUNT
@@ -191,6 +266,8 @@ function App() {
   const createAccount = async () => {
     const cleanUsername = username.trim()
     const cleanPin = pin.trim()
+
+    setAuthMessage('')
 
     if (!cleanUsername || !cleanPin) {
       setAuthMessage('Please enter a username and PIN.')
@@ -208,17 +285,24 @@ function App() {
     }
 
     setAuthLoading(true)
-    setAuthMessage('')
 
     try {
-      const { data: existingPlayer, error: checkError } =
-        await supabase
-          .from('players')
-          .select('id')
-          .eq('username', cleanUsername)
-          .maybeSingle()
+      const {
+        data: existingPlayer,
+        error: checkError,
+      } = await supabase
+        .from('players')
+        .select('id, username')
+        .eq('username', cleanUsername)
+        .maybeSingle()
 
-      if (checkError) throw checkError
+      if (checkError) {
+        showSupabaseError(
+          checkError,
+          'Could not check the username.'
+        )
+        return
+      }
 
       if (existingPlayer) {
         setAuthMessage(
@@ -227,34 +311,51 @@ function App() {
         return
       }
 
-      const { data, error } = await supabase
+      const {
+        data: newPlayer,
+        error: insertError,
+      } = await supabase
         .from('players')
-        .insert([
-          {
-            username: cleanUsername,
-            pin: cleanPin,
-            score: STARTING_CAPITAL,
-          },
-        ])
+        .insert({
+          username: cleanUsername,
+          pin: cleanPin,
+          score: STARTING_CAPITAL,
+        })
         .select()
         .single()
 
-      if (error) throw error
+      if (insertError) {
+        showSupabaseError(
+          insertError,
+          'Could not create the account.'
+        )
+        return
+      }
 
-      setCurrentPlayer(data)
+      if (!newPlayer) {
+        setAuthMessage(
+          'Account creation succeeded, but no player data was returned.'
+        )
+        return
+      }
+
+      setCurrentPlayer(newPlayer)
 
       localStorage.setItem(
         'stockMarketPlayer',
-        JSON.stringify(data)
+        JSON.stringify(newPlayer)
       )
 
       setUsername('')
       setPin('')
+      setAuthMessage('')
     } catch (error) {
-      console.error(error)
+      console.error('Create account error:', error)
 
       setAuthMessage(
-        'Could not create the account. Please try again.'
+        error?.message
+          ? `Error: ${error.message}`
+          : 'Could not create the account. Please try again.'
       )
     } finally {
       setAuthLoading(false)
@@ -269,38 +370,57 @@ function App() {
     const cleanUsername = username.trim()
     const cleanPin = pin.trim()
 
+    setAuthMessage('')
+
     if (!cleanUsername || !cleanPin) {
       setAuthMessage('Please enter a username and PIN.')
       return
     }
 
     setAuthLoading(true)
-    setAuthMessage('')
 
     try {
-      const { data, error } = await supabase
+      const {
+        data: player,
+        error: loginError,
+      } = await supabase
         .from('players')
         .select('*')
         .eq('username', cleanUsername)
         .eq('pin', cleanPin)
         .maybeSingle()
 
-      if (error) throw error
+      if (loginError) {
+        showSupabaseError(
+          loginError,
+          'Login failed. Please try again.'
+        )
+        return
+      }
 
-      if (!data) {
+      if (!player) {
         setAuthMessage('Incorrect username or PIN.')
         return
       }
 
-      setCurrentPlayer(data)
+      setCurrentPlayer(player)
 
       localStorage.setItem(
         'stockMarketPlayer',
-        JSON.stringify(data)
+        JSON.stringify(player)
       )
+
+      setUsername('')
+      setPin('')
+      setAuthMessage('')
     } catch (error) {
-      console.error(error)
-      setAuthMessage('Login failed. Please try again.')
+      console.error('Login error:', error)
+
+      setAuthMessage(
+        error?.message
+          ? `Error: ${error.message}`
+          : 'Login failed. Please try again.'
+      )
     } finally {
       setAuthLoading(false)
     }
@@ -337,6 +457,7 @@ function App() {
     localStorage.removeItem('stockMarketPlayer')
     setCurrentPlayer(null)
     resetGame()
+    setActiveTab('game')
   }
 
   // =========================
@@ -345,6 +466,7 @@ function App() {
 
   const startGame = () => {
     resetGame()
+    setActiveTab('game')
     setGameStarted(true)
   }
 
@@ -410,7 +532,6 @@ function App() {
     setDecisions({})
     setDecisionLocked(false)
     setRevealed(false)
-
     setTimer(currentRound.decisionTime)
     setDecisionOpen(true)
   }
@@ -419,7 +540,11 @@ function App() {
   // UPDATE DECISION
   // =========================
 
-  const updateDecision = (stockId, action, quantity = 0) => {
+  const updateDecision = (
+    stockId,
+    action,
+    quantity = 0
+  ) => {
     if (
       !decisionOpen ||
       decisionLocked ||
@@ -438,7 +563,7 @@ function App() {
   }
 
   // =========================
-  // BUY
+  // BUY SHARES
   // =========================
 
   const buyShares = (stockId, quantity) => {
@@ -457,15 +582,16 @@ function App() {
 
     if (!stock) return
 
-    const totalCost = stock.price * quantity
+    const totalCost =
+      stock.price * quantity
 
-    // Can't buy if player doesn't have enough money.
     if (totalCost > cash) {
       return
     }
 
-    setCash((previousCash) =>
-      previousCash - totalCost
+    setCash(
+      (previousCash) =>
+        previousCash - totalCost
     )
 
     setStocks((previousStocks) =>
@@ -475,7 +601,8 @@ function App() {
         }
 
         const oldShares = item.shares
-        const newShares = oldShares + quantity
+        const newShares =
+          oldShares + quantity
 
         const oldInvestment =
           oldShares * item.avgPrice
@@ -504,10 +631,13 @@ function App() {
   }
 
   // =========================
-  // SELL
+  // SELL SHARES
   // =========================
 
-  const sellShares = (stockId, quantity) => {
+  const sellShares = (
+    stockId,
+    quantity
+  ) => {
     if (
       !decisionOpen ||
       decisionLocked ||
@@ -523,7 +653,6 @@ function App() {
 
     if (!stock) return
 
-    // Can't sell more than owned.
     if (quantity > stock.shares) {
       return
     }
@@ -531,8 +660,9 @@ function App() {
     const totalReceived =
       stock.price * quantity
 
-    setCash((previousCash) =>
-      previousCash + totalReceived
+    setCash(
+      (previousCash) =>
+        previousCash + totalReceived
     )
 
     setStocks((previousStocks) =>
@@ -628,7 +758,8 @@ function App() {
     }
 
     setRound(
-      (previous) => previous + 1
+      (previous) =>
+        previous + 1
     )
 
     setDecisionLocked(false)
@@ -644,18 +775,267 @@ function App() {
   const finishGame = async () => {
     setGameFinished(true)
 
-    if (!currentPlayer) return
+    if (!currentPlayer?.id) {
+      return
+    }
+
+    const finalScore = Math.round(
+      portfolioValue
+    )
 
     try {
-      await supabase
+      const {
+        data: updatedPlayer,
+        error,
+      } = await supabase
         .from('players')
         .update({
-          score: Math.round(portfolioValue),
+          score: finalScore,
         })
-        .eq('id', currentPlayer.id)
+        .eq(
+          'id',
+          currentPlayer.id
+        )
+        .select()
+        .single()
+
+      if (error) {
+        console.error(
+          'Could not save final score:',
+          error
+        )
+        return
+      }
+
+      if (updatedPlayer) {
+        setCurrentPlayer(updatedPlayer)
+
+        localStorage.setItem(
+          'stockMarketPlayer',
+          JSON.stringify(updatedPlayer)
+        )
+      }
+
+      // Refresh leaderboard data after saving score.
+      await loadLeaderboard()
     } catch (error) {
-      console.error(error)
+      console.error(
+        'Could not save final score:',
+        error
+      )
     }
+  }
+
+  // =========================
+  // TABS
+  // =========================
+
+  const renderTabs = () => {
+    return (
+      <div className="tabs">
+
+        <button
+          className={
+            activeTab === 'game'
+              ? 'tab active'
+              : 'tab'
+          }
+          onClick={() => {
+            setActiveTab('game')
+            setAuthMessage('')
+          }}
+        >
+          🎮 GAME
+        </button>
+
+        <button
+          className={
+            activeTab === 'leaderboard'
+              ? 'tab active'
+              : 'tab'
+          }
+          onClick={() => {
+            setActiveTab('leaderboard')
+            setAuthMessage('')
+          }}
+        >
+          🏆 LEADERBOARD
+        </button>
+
+      </div>
+    )
+  }
+
+  // =========================
+  // LEADERBOARD SCREEN
+  // =========================
+
+  const renderLeaderboard = () => {
+    return (
+      <div className="app">
+
+        <header className="game-header">
+
+          <div>
+
+            <span className="game-label">
+              STOCK MARKET LIVE
+            </span>
+
+            <h1>
+              LEADERBOARD
+            </h1>
+
+            <p>
+              See how every investor performed.
+            </p>
+
+          </div>
+
+          <div className="header-stats">
+
+            <div>
+
+              <span>
+                YOUR SCORE
+              </span>
+
+              <strong>
+                {formatMoney(
+                  currentPlayer?.score ??
+                  STARTING_CAPITAL
+                )}
+              </strong>
+
+            </div>
+
+          </div>
+
+        </header>
+
+        {renderTabs()}
+
+        <main className="game-main">
+
+          <section className="market">
+
+            <div className="market-header">
+
+              <h2>
+                🏆 TOP INVESTORS
+              </h2>
+
+              <p>
+                Highest final portfolio values
+              </p>
+
+            </div>
+
+            {leaderboardLoading ? (
+
+              <div className="locked-card">
+
+                <div>
+                  📊
+                </div>
+
+                <h2>
+                  LOADING LEADERBOARD...
+                </h2>
+
+                <p>
+                  Getting the latest scores.
+                </p>
+
+              </div>
+
+            ) : leaderboard.length === 0 ? (
+
+              <div className="locked-card">
+
+                <div>
+                  🏆
+                </div>
+
+                <h2>
+                  NO PLAYERS YET
+                </h2>
+
+                <p>
+                  Finish a game to appear here.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="leaderboard-list">
+
+                {leaderboard.map(
+                  (player, index) => {
+
+                    const isCurrentPlayer =
+                      player.id ===
+                      currentPlayer?.id
+
+                    return (
+                      <div
+                        key={player.id}
+                        className={
+                          isCurrentPlayer
+                            ? 'leaderboard-row your-score'
+                            : 'leaderboard-row'
+                        }
+                      >
+
+                        <div className="rank">
+
+                          {index === 0
+                            ? '🥇'
+                            : index === 1
+                            ? '🥈'
+                            : index === 2
+                            ? '🥉'
+                            : `#${index + 1}`}
+
+                        </div>
+
+                        <div className="player-name">
+
+                          <strong>
+                            {player.username}
+                          </strong>
+
+                          {isCurrentPlayer && (
+                            <span>
+                              YOU
+                            </span>
+                          )}
+
+                        </div>
+
+                        <strong className="player-value">
+                          {formatMoney(
+                            player.score ??
+                            0
+                          )}
+                        </strong>
+
+                      </div>
+                    )
+                  }
+                )}
+
+              </div>
+
+            )}
+
+          </section>
+
+        </main>
+
+      </div>
+    )
   }
 
   // =========================
@@ -665,19 +1045,25 @@ function App() {
   if (!currentPlayer) {
     return (
       <div className="app">
+
         <div className="auth-container">
+
           <div className="auth-card">
+
             <div className="auth-logo">
               📈
             </div>
 
-            <h1>StockMarket</h1>
+            <h1>
+              StockMarket
+            </h1>
 
             <p className="auth-subtitle">
               Learn. Trade. Think.
             </p>
 
             <div className="auth-tabs">
+
               <button
                 className={
                   authMode === 'login'
@@ -705,30 +1091,64 @@ function App() {
               >
                 Create Account
               </button>
+
             </div>
 
             <div className="auth-form">
-              <label>Username</label>
+
+              <label>
+                Username
+              </label>
 
               <input
                 type="text"
                 placeholder="Enter username"
                 value={username}
+                autoComplete="username"
                 onChange={(event) =>
-                  setUsername(event.target.value)
+                  setUsername(
+                    event.target.value
+                  )
                 }
+                onKeyDown={(event) => {
+                  if (
+                    event.key === 'Enter'
+                  ) {
+                    authMode === 'login'
+                      ? login()
+                      : createAccount()
+                  }
+                }}
               />
 
-              <label>PIN</label>
+              <label>
+                PIN
+              </label>
 
               <input
                 type="password"
                 inputMode="numeric"
                 placeholder="Enter PIN"
                 value={pin}
-                onChange={(event) =>
-                  setPin(event.target.value)
+                autoComplete={
+                  authMode === 'login'
+                    ? 'current-password'
+                    : 'new-password'
                 }
+                onChange={(event) =>
+                  setPin(
+                    event.target.value
+                  )
+                }
+                onKeyDown={(event) => {
+                  if (
+                    event.key === 'Enter'
+                  ) {
+                    authMode === 'login'
+                      ? login()
+                      : createAccount()
+                  }
+                }}
               />
 
               {authMessage && (
@@ -739,7 +1159,9 @@ function App() {
 
               <button
                 className="auth-submit"
-                disabled={authLoading}
+                disabled={
+                  authLoading
+                }
                 onClick={
                   authMode === 'login'
                     ? login
@@ -752,15 +1174,28 @@ function App() {
                   ? 'LOGIN'
                   : 'CREATE ACCOUNT'}
               </button>
+
             </div>
 
             <p className="auth-note">
-              Your account identifies you on the leaderboard.
+              Your account identifies you
+              on the leaderboard.
             </p>
+
           </div>
+
         </div>
+
       </div>
     )
+  }
+
+  // =========================
+  // LEADERBOARD TAB
+  // =========================
+
+  if (activeTab === 'leaderboard') {
+    return renderLeaderboard()
   }
 
   // =========================
@@ -770,12 +1205,18 @@ function App() {
   if (!gameStarted) {
     return (
       <div className="app">
+
+        {renderTabs()}
+
         <div className="game-start">
+
           <div className="game-logo">
             📈
           </div>
 
-          <h1>STOCK MARKET LIVE</h1>
+          <h1>
+            STOCK MARKET LIVE
+          </h1>
 
           <p className="player-welcome">
             Welcome,{' '}
@@ -785,39 +1226,61 @@ function App() {
           </p>
 
           <div className="starting-capital">
-            <span>STARTING CAPITAL</span>
+
+            <span>
+              STARTING CAPITAL
+            </span>
 
             <strong>
               {formatMoney(
                 STARTING_CAPITAL
               )}
             </strong>
+
           </div>
 
           <div className="game-rules-preview">
+
             <div>
               📰
-              <strong>Market News</strong>
-              <span>React to information</span>
+              <strong>
+                Market News
+              </strong>
+              <span>
+                React to information
+              </span>
             </div>
 
             <div>
               ⏱️
-              <strong>Timed Decisions</strong>
-              <span>30 seconds</span>
+              <strong>
+                Timed Decisions
+              </strong>
+              <span>
+                30 seconds
+              </span>
             </div>
 
             <div>
               📊
-              <strong>Hidden Prices</strong>
-              <span>Think before trading</span>
+              <strong>
+                Hidden Prices
+              </strong>
+              <span>
+                Think before trading
+              </span>
             </div>
 
             <div>
               🏆
-              <strong>Final Ranking</strong>
-              <span>Highest portfolio wins</span>
+              <strong>
+                Final Ranking
+              </strong>
+              <span>
+                Highest portfolio wins
+              </span>
             </div>
+
           </div>
 
           <button
@@ -833,7 +1296,9 @@ function App() {
           >
             Logout
           </button>
+
         </div>
+
       </div>
     )
   }
@@ -845,17 +1310,28 @@ function App() {
   if (gameFinished) {
     return (
       <div className="app">
+
+        {renderTabs()}
+
         <div className="final-screen">
+
           <div className="final-trophy">
             🏆
           </div>
 
-          <h1>MARKET CLOSED</h1>
+          <h1>
+            MARKET CLOSED
+          </h1>
 
-          <p>All trading has ended.</p>
+          <p>
+            All trading has ended.
+          </p>
 
           <div className="final-card">
-            <span>FINAL PORTFOLIO VALUE</span>
+
+            <span>
+              FINAL PORTFOLIO VALUE
+            </span>
 
             <strong>
               {formatMoney(
@@ -874,15 +1350,19 @@ function App() {
                 ? '▲'
                 : '▼'}{' '}
               {formatMoney(
-                Math.abs(profitLoss)
+                Math.abs(
+                  profitLoss
+                )
               )}{' '}
               {profitLoss >= 0
                 ? 'PROFIT'
                 : 'LOSS'}
             </div>
+
           </div>
 
           <div className="lesson-card">
+
             <h2>
               💡 What did you learn?
             </h2>
@@ -892,7 +1372,8 @@ function App() {
                 Diversification
               </strong>
               <br />
-              Putting everything into one company increases risk.
+              Putting everything into one
+              company increases risk.
             </p>
 
             <p>
@@ -900,7 +1381,8 @@ function App() {
                 Risk vs Reward
               </strong>
               <br />
-              Riskier investments can have larger gains or losses.
+              Riskier investments can have
+              larger gains or losses.
             </p>
 
             <p>
@@ -908,7 +1390,8 @@ function App() {
                 Market Information
               </strong>
               <br />
-              News can influence investor expectations.
+              News can influence investor
+              expectations.
             </p>
 
             <p>
@@ -916,14 +1399,17 @@ function App() {
                 Emotional Decisions
               </strong>
               <br />
-              Panic can lead to poor decisions.
+              Panic can lead to poor
+              decisions.
             </p>
 
             <p>
               <strong>
-                Nobody Can Predict the Market Perfectly
+                Nobody Can Predict the
+                Market Perfectly
               </strong>
             </p>
+
           </div>
 
           <button
@@ -939,7 +1425,9 @@ function App() {
           >
             Logout
           </button>
+
         </div>
+
       </div>
     )
   }
@@ -951,13 +1439,20 @@ function App() {
   if (round === 0) {
     return (
       <div className="app">
+
+        {renderTabs()}
+
         <header className="game-header">
+
           <div>
+
             <span className="game-label">
               STOCK MARKET LIVE
             </span>
 
-            <h1>MARKET OPEN</h1>
+            <h1>
+              MARKET OPEN
+            </h1>
 
             <p>
               Investor:{' '}
@@ -965,29 +1460,41 @@ function App() {
                 {currentPlayer.username}
               </strong>
             </p>
+
           </div>
 
           <div className="header-stats">
+
             <div>
-              <span>CASH</span>
+              <span>
+                CASH
+              </span>
+
               <strong>
                 {formatMoney(cash)}
               </strong>
             </div>
 
             <div>
-              <span>VALUE</span>
+              <span>
+                VALUE
+              </span>
+
               <strong>
                 {formatMoney(
                   portfolioValue
                 )}
               </strong>
             </div>
+
           </div>
+
         </header>
 
         <main className="game-main">
+
           <section className="market-open-card">
+
             <div className="round-number">
               ROUND 1
             </div>
@@ -1002,11 +1509,13 @@ function App() {
             </p>
 
             <div className="stock-grid">
+
               {stocks.map((stock) => (
                 <div
                   className="stock-card"
                   key={stock.id}
                 >
+
                   <span className="stock-icon">
                     {stock.icon}
                   </span>
@@ -1024,8 +1533,10 @@ function App() {
                       stock.price
                     )}
                   </strong>
+
                 </div>
               ))}
+
             </div>
 
             <button
@@ -1036,8 +1547,11 @@ function App() {
             >
               CONTINUE →
             </button>
+
           </section>
+
         </main>
+
       </div>
     )
   }
@@ -1048,8 +1562,13 @@ function App() {
 
   return (
     <div className="app">
+
+      {renderTabs()}
+
       <header className="game-header">
+
         <div>
+
           <span className="game-label">
             ROUND {round} / {ROUND_DATA.length}
           </span>
@@ -1064,25 +1583,35 @@ function App() {
               {currentPlayer.username}
             </strong>
           </p>
+
         </div>
 
         <div className="header-stats">
+
           <div>
-            <span>💰 CASH</span>
+            <span>
+              💰 CASH
+            </span>
+
             <strong>
               {formatMoney(cash)}
             </strong>
           </div>
 
           <div>
-            <span>📊 VALUE</span>
+            <span>
+              📊 VALUE
+            </span>
+
             <strong>
               {formatMoney(
                 portfolioValue
               )}
             </strong>
           </div>
+
         </div>
+
       </header>
 
       <main className="game-main">
@@ -1092,14 +1621,20 @@ function App() {
         <section
           className={`news-card ${currentRound.type}`}
         >
+
           <div className="news-badge">
-            {currentRound.type === 'crisis'
+
+            {currentRound.type ===
+            'crisis'
               ? '🚨 MARKET ALERT'
-              : currentRound.type === 'final'
+              : currentRound.type ===
+                'final'
               ? '🏁 FINAL CHALLENGE'
-              : currentRound.type === 'indirect'
+              : currentRound.type ===
+                'indirect'
               ? '📰 MARKET INFORMATION'
               : '📰 BREAKING NEWS'}
+
           </div>
 
           <h2>
@@ -1109,6 +1644,7 @@ function App() {
           <p>
             {currentRound.description}
           </p>
+
         </section>
 
         {/* START DECISION */}
@@ -1117,6 +1653,7 @@ function App() {
           !decisionLocked &&
           !revealed && (
             <section className="decision-start">
+
               <div className="round-number">
                 ROUND {round}
               </div>
@@ -1132,11 +1669,16 @@ function App() {
 
               <button
                 className="primary-button"
-                onClick={startDecision}
+                onClick={
+                  startDecision
+                }
               >
                 START{' '}
-                {currentRound.decisionTime}s TIMER
+                {
+                  currentRound.decisionTime
+                }s TIMER
               </button>
+
             </section>
           )}
 
@@ -1145,35 +1687,46 @@ function App() {
         {decisionOpen && (
           <section className="decision-section">
 
-            {/* Compact status bar */}
-
             <div className="trading-status">
+
               <div className="timer-box">
-                <span>TIME</span>
+                <span>
+                  TIME
+                </span>
+
                 <strong>
                   {timer}s
                 </strong>
               </div>
 
               <div>
-                <span>CASH</span>
+                <span>
+                  CASH
+                </span>
+
                 <strong>
                   {formatMoney(cash)}
                 </strong>
               </div>
 
               <div>
-                <span>PORTFOLIO</span>
+                <span>
+                  PORTFOLIO
+                </span>
+
                 <strong>
                   {formatMoney(
                     portfolioValue
                   )}
                 </strong>
               </div>
+
             </div>
 
             <div className="decision-heading">
+
               <div>
+
                 <span className="round-number">
                   YOUR MOVE
                 </span>
@@ -1181,17 +1734,23 @@ function App() {
                 <h2>
                   BUY • HOLD • SELL
                 </h2>
+
               </div>
 
               <div className="timer-large">
                 {timer}
               </div>
+
             </div>
 
             <div className="decision-grid">
+
               {stocks.map((stock) => {
+
                 const selected =
-                  decisions[stock.id]
+                  decisions[
+                    stock.id
+                  ]
 
                 const selectedAction =
                   selected?.action
@@ -1201,7 +1760,8 @@ function App() {
 
                 const maxBuy =
                   Math.floor(
-                    cash / stock.price
+                    cash /
+                      stock.price
                   )
 
                 return (
@@ -1214,14 +1774,14 @@ function App() {
                     key={stock.id}
                   >
 
-                    {/* COMPANY */}
-
                     <div className="decision-company">
+
                       <span className="decision-icon">
                         {stock.icon}
                       </span>
 
                       <div className="company-info">
+
                         <strong>
                           {stock.name}
                         </strong>
@@ -1239,30 +1799,39 @@ function App() {
                             {stock.shares}
                           </b>
                         </span>
+
                       </div>
+
                     </div>
 
-                    {/* QUANTITY */}
-
                     <div className="quantity-area">
+
                       <span>
                         BUY / SELL QUANTITY
                       </span>
 
                       <div className="quantity-controls">
+
                         <button
                           type="button"
+                          disabled={
+                            selectedQuantity <=
+                            0
+                          }
                           onClick={() => {
-                            const current =
-                              selectedQuantity
+
+                            const newQuantity =
+                              Math.max(
+                                0,
+                                selectedQuantity -
+                                  1
+                              )
 
                             updateDecision(
                               stock.id,
-                              selectedAction || 'BUY',
-                              Math.max(
-                                0,
-                                current - 1
-                              )
+                              selectedAction ||
+                                'BUY',
+                              newQuantity
                             )
                           }}
                         >
@@ -1276,8 +1845,6 @@ function App() {
                         <button
                           type="button"
                           onClick={() => {
-                            const current =
-                              selectedQuantity
 
                             const max =
                               selectedAction ===
@@ -1286,30 +1853,33 @@ function App() {
                                 : maxBuy
 
                             if (
-                              current < max
+                              selectedQuantity <
+                              max
                             ) {
                               updateDecision(
                                 stock.id,
                                 selectedAction ||
                                   'BUY',
-                                current + 1
+                                selectedQuantity +
+                                  1
                               )
                             }
                           }}
                         >
                           +
                         </button>
-                      </div>
-                    </div>
 
-                    {/* ACTION BUTTONS */}
+                      </div>
+
+                    </div>
 
                     <div className="decision-buttons">
 
                       <button
                         type="button"
                         className={
-                          selectedAction === 'BUY'
+                          selectedAction ===
+                          'BUY'
                             ? 'decision-button buy selected'
                             : 'decision-button buy'
                         }
@@ -1317,10 +1887,12 @@ function App() {
                           maxBuy <= 0
                         }
                         onClick={() => {
+
                           const quantity =
                             selectedAction ===
-                            'BUY' &&
-                            selectedQuantity > 0
+                              'BUY' &&
+                            selectedQuantity >
+                              0
                               ? selectedQuantity
                               : 1
 
@@ -1333,11 +1905,13 @@ function App() {
                               quantity
                             )
                           }
+
                         }}
                       >
                         {selectedAction ===
                           'BUY' &&
-                        selectedQuantity > 0
+                        selectedQuantity >
+                          0
                           ? `✓ BUY × ${selectedQuantity}`
                           : 'BUY'}
                       </button>
@@ -1345,7 +1919,8 @@ function App() {
                       <button
                         type="button"
                         className={
-                          selectedAction === 'HOLD'
+                          selectedAction ===
+                          'HOLD'
                             ? 'decision-button hold selected'
                             : 'decision-button hold'
                         }
@@ -1364,18 +1939,22 @@ function App() {
                       <button
                         type="button"
                         className={
-                          selectedAction === 'SELL'
+                          selectedAction ===
+                          'SELL'
                             ? 'decision-button sell selected'
                             : 'decision-button sell'
                         }
                         disabled={
-                          stock.shares <= 0
+                          stock.shares <=
+                          0
                         }
                         onClick={() => {
+
                           const quantity =
                             selectedAction ===
-                            'SELL' &&
-                            selectedQuantity > 0
+                              'SELL' &&
+                            selectedQuantity >
+                              0
                               ? Math.min(
                                   selectedQuantity,
                                   stock.shares
@@ -1391,37 +1970,45 @@ function App() {
                               quantity
                             )
                           }
+
                         }}
                       >
                         {selectedAction ===
                           'SELL' &&
-                        selectedQuantity > 0
+                        selectedQuantity >
+                          0
                           ? `✓ SELL × ${selectedQuantity}`
                           : 'SELL'}
                       </button>
-                    </div>
 
-                    {/* SELECTED INFO */}
+                    </div>
 
                     {selectedAction && (
                       <div className="selected-decision">
+
                         {selectedAction ===
                           'BUY' &&
-                        selectedQuantity > 0 ? (
+                        selectedQuantity >
+                          0 ? (
                           <>
                             Buying{' '}
                             <strong>
-                              {selectedQuantity}
+                              {
+                                selectedQuantity
+                              }
                             </strong>{' '}
                             shares
                           </>
                         ) : selectedAction ===
-                          'SELL' &&
-                          selectedQuantity > 0 ? (
+                            'SELL' &&
+                          selectedQuantity >
+                            0 ? (
                           <>
                             Selling{' '}
                             <strong>
-                              {selectedQuantity}
+                              {
+                                selectedQuantity
+                              }
                             </strong>{' '}
                             shares
                           </>
@@ -1433,19 +2020,25 @@ function App() {
                             position
                           </>
                         )}
+
                       </div>
                     )}
+
                   </div>
                 )
               })}
+
             </div>
 
             <button
               className="lock-button"
-              onClick={lockDecision}
+              onClick={
+                lockDecision
+              }
             >
               🔒 LOCK DECISIONS
             </button>
+
           </section>
         )}
 
@@ -1454,7 +2047,10 @@ function App() {
         {decisionLocked &&
           !revealed && (
             <section className="locked-card">
-              <div>🔒</div>
+
+              <div>
+                🔒
+              </div>
 
               <h2>
                 DECISION LOCKED!
@@ -1466,10 +2062,13 @@ function App() {
 
               <button
                 className="primary-button"
-                onClick={revealPrices}
+                onClick={
+                  revealPrices
+                }
               >
                 REVEAL MARKET →
               </button>
+
             </section>
           )}
 
@@ -1483,27 +2082,42 @@ function App() {
             </div>
 
             <div className="price-table">
+
               <div className="price-row header-row">
-                <span>STOCK</span>
-                <span>BEFORE</span>
-                <span>AFTER</span>
+
+                <span>
+                  STOCK
+                </span>
+
+                <span>
+                  BEFORE
+                </span>
+
+                <span>
+                  AFTER
+                </span>
+
               </div>
 
               {stocks.map((stock) => {
+
                 const before =
                   INITIAL_STOCKS.find(
                     (item) =>
-                      item.id === stock.id
+                      item.id ===
+                      stock.id
                   )?.price ?? 100
 
                 const change =
-                  stock.price - before
+                  stock.price -
+                  before
 
                 return (
                   <div
                     className="price-row"
                     key={stock.id}
                   >
+
                     <span>
                       {stock.icon}{' '}
                       {stock.name}
@@ -1525,30 +2139,43 @@ function App() {
                       {change >= 0
                         ? '▲ '
                         : '▼ '}
+
                       {formatMoney(
                         stock.price
                       )}
                     </span>
+
                   </div>
                 )
               })}
+
             </div>
 
             <div className="portfolio-summary">
+
               <h2>
                 YOUR PORTFOLIO
               </h2>
 
               <div className="summary-grid">
+
                 <div>
-                  <span>Cash</span>
+                  <span>
+                    Cash
+                  </span>
+
                   <strong>
-                    {formatMoney(cash)}
+                    {formatMoney(
+                      cash
+                    )}
                   </strong>
                 </div>
 
                 <div>
-                  <span>Shares</span>
+                  <span>
+                    Shares
+                  </span>
+
                   <strong>
                     {formatMoney(
                       stockValue
@@ -1557,13 +2184,17 @@ function App() {
                 </div>
 
                 <div>
-                  <span>Total</span>
+                  <span>
+                    Total
+                  </span>
+
                   <strong>
                     {formatMoney(
                       portfolioValue
                     )}
                   </strong>
                 </div>
+
               </div>
 
               <div
@@ -1576,18 +2207,22 @@ function App() {
                 {profitLoss >= 0
                   ? '▲'
                   : '▼'}{' '}
+
                 {formatMoney(
                   Math.abs(
                     profitLoss
                   )
                 )}{' '}
+
                 overall
               </div>
+
             </div>
 
             <button
               className="primary-button"
               onClick={() => {
+
                 if (
                   round >=
                   ROUND_DATA.length
@@ -1596,6 +2231,7 @@ function App() {
                 } else {
                   nextRound()
                 }
+
               }}
             >
               {round >=
@@ -1603,9 +2239,12 @@ function App() {
                 ? 'MARKET CLOSED →'
                 : 'NEXT ROUND →'}
             </button>
+
           </section>
         )}
+
       </main>
+
     </div>
   )
 }
