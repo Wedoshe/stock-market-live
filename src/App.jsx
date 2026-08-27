@@ -1,58 +1,46 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import './App.css'
-import { supabase } from './supabaseClient'
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import "./App.css";
 
-const STARTING_CAPITAL = 10000
+const STARTING_CASH = 10000;
+const ROUND_TIME = 30;
 
-const INITIAL_STOCKS = [
+const STOCKS = [
   {
-    id: 'sunvolt',
-    name: 'SunVolt',
-    symbol: 'SUN',
-    price: 100,
-    shares: 0,
-    avgPrice: 0,
+    id: "sunvolt",
+    name: "SunVolt",
+    sector: "Renewable Energy",
+    initialPrice: 100,
   },
   {
-    id: 'fuelpower',
-    name: 'FuelPower',
-    symbol: 'FUEL',
-    price: 100,
-    shares: 0,
-    avgPrice: 0,
+    id: "fuelpower",
+    name: "FuelPower",
+    sector: "Energy",
+    initialPrice: 100,
   },
   {
-    id: 'foodrush',
-    name: 'FoodRush',
-    symbol: 'FOOD',
-    price: 100,
-    shares: 0,
-    avgPrice: 0,
+    id: "foodrush",
+    name: "FoodRush",
+    sector: "Food & Retail",
+    initialPrice: 100,
   },
   {
-    id: 'movemax',
-    name: 'MoveMax',
-    symbol: 'MOVE',
-    price: 100,
-    shares: 0,
-    avgPrice: 0,
+    id: "movemax",
+    name: "MoveMax",
+    sector: "Transportation",
+    initialPrice: 100,
   },
   {
-    id: 'medicore',
-    name: 'MediCore',
-    symbol: 'MEDI',
-    price: 100,
-    shares: 0,
-    avgPrice: 0,
+    id: "medicore",
+    name: "MediCore",
+    sector: "Healthcare",
+    initialPrice: 100,
   },
-]
+];
 
-const ROUND_DATA = [
+const ROUNDS = [
   {
     id: 1,
-    title: 'BREAKING NEWS',
-    news: 'SUNVOLT WINS A MAJOR GOVERNMENT SOLAR CONTRACT',
-    decisionTime: 30,
+    headline: "SUNVOLT WINS A MAJOR GOVERNMENT SOLAR CONTRACT",
     prices: {
       sunvolt: 150,
       fuelpower: 80,
@@ -61,18 +49,16 @@ const ROUND_DATA = [
       medicore: 100,
     },
     reasons: {
-      sunvolt: 'Major government contract increases future business and investor confidence.',
-      fuelpower: 'Greater dependence on solar reduces demand for traditional fuel.',
-      foodrush: 'Lower fuel costs reduce operating expenses and improve profits.',
-      movemax: 'Lower fuel costs encourage more travel and reduce transport costs.',
-      medicore: 'The announcement does not directly affect the healthcare sector.',
+      sunvolt: "The government contract increases SunVolt's expected business and future revenue.",
+      fuelpower: "Greater dependence on solar energy reduces demand for traditional fuel.",
+      foodrush: "Lower fuel costs reduce operating and cooking-related expenses, improving profits.",
+      movemax: "Lower fuel costs reduce transportation expenses and encourage more vehicle use.",
+      medicore: "The solar contract does not directly affect the healthcare sector.",
     },
   },
   {
     id: 2,
-    title: 'MARKET INFORMATION',
-    news: 'GLOBAL OIL PRICES RISE SHARPLY',
-    decisionTime: 30,
+    headline: "GLOBAL OIL PRICES RISE SHARPLY",
     prices: {
       sunvolt: 180,
       fuelpower: 120,
@@ -81,38 +67,36 @@ const ROUND_DATA = [
       medicore: 100,
     },
     reasons: {
-      sunvolt: 'Higher fuel prices increase demand for alternative energy such as solar.',
-      fuelpower: 'Higher oil prices increase the value and revenue potential of fuel companies.',
-      foodrush: 'Higher fuel costs increase operating expenses and reduce profits.',
-      movemax: 'Higher fuel prices raise transportation costs and hurt the business.',
-      medicore: 'Oil prices have no significant direct effect on healthcare demand.',
+      sunvolt: "Higher fuel prices make solar power more attractive as an alternative energy source.",
+      fuelpower: "Higher oil prices increase the value and revenue potential of fuel companies.",
+      foodrush: "Higher fuel costs increase operating expenses, reducing expected profits.",
+      movemax: "Higher fuel prices increase transportation costs and hurt the company's outlook.",
+      medicore: "Oil prices have no major direct effect on healthcare demand.",
     },
   },
   {
     id: 3,
-    title: 'GOVERNMENT ANNOUNCEMENT',
-    news: 'GOVERNMENT ANNOUNCES PETROL PRICES CUT BY 50% TO HELP COMMON PEOPLE',
-    decisionTime: 30,
+    headline:
+      "GOVERNMENT BANS ENTRY OF DIESEL VEHICLES; EV VEHICLES WILL BE PAID TO OPERATE",
     prices: {
-      sunvolt: 150,
-      fuelpower: 25,
-      foodrush: 170,
+      sunvolt: 210,
+      fuelpower: 80,
+      foodrush: 100,
       movemax: 130,
-      medicore: 200,
+      medicore: 100,
     },
     reasons: {
-      sunvolt: 'Cheaper petrol makes people less dependent on solar-powered alternatives.',
-      fuelpower: 'The 50% petrol price cut directly reduces fuel-sector prices.',
-      foodrush: 'Lower fuel costs reduce operating expenses and improve food-company profits.',
-      movemax: 'Cheaper petrol encourages more vehicle use and boosts transport demand.',
-      medicore: 'The petrol price change does not directly affect healthcare.',
+      sunvolt: "The shift toward EVs increases demand for electricity and supports renewable energy.",
+      fuelpower: "The diesel ban reduces demand for traditional fuel and hurts fuel companies.",
+      foodrush: "The policy has little direct effect on FoodRush's food business.",
+      movemax: "Government support for EV operation increases demand while diesel competitors are restricted.",
+      medicore: "The EV and diesel policy has no major direct effect on healthcare.",
     },
   },
   {
     id: 4,
-    title: 'MARKET ALERT',
-    news: 'NEW VIRUS OUTBREAK — GOVERNMENT ANNOUNCES FULL LOCKDOWN',
-    decisionTime: 30,
+    headline:
+      "NEW VIRUS OUTBREAK — GOVERNMENT ANNOUNCES FULL LOCKDOWN",
     prices: {
       sunvolt: 190,
       fuelpower: 50,
@@ -121,2367 +105,729 @@ const ROUND_DATA = [
       medicore: 200,
     },
     reasons: {
-      sunvolt: 'Factories and offices close, reducing energy demand despite continued solar relevance.',
-      fuelpower: 'People staying home means much less vehicle and fuel usage.',
-      foodrush: 'People staying home increases demand for food delivery and essential online orders.',
-      movemax: 'The lockdown sharply reduces vehicle and transport usage.',
-      medicore: 'The outbreak increases healthcare demand and creates opportunities for medical products.',
+      sunvolt: "Factories and offices close during lockdown, reducing overall energy demand.",
+      fuelpower: "Vehicle use falls sharply during lockdown, reducing fuel demand.",
+      foodrush: "People staying home increases demand for food delivery and online necessities.",
+      movemax: "Travel and transportation restrictions severely reduce vehicle and transport activity.",
+      medicore: "The outbreak creates higher healthcare demand and opportunities for vaccine development and supply.",
     },
   },
-]
-
-function formatMoney(value) {
-  return `₹${Math.round(value).toLocaleString('en-IN')}`
-}
+];
 
 function App() {
-  // =========================
-  // ACCOUNT
-  // =========================
+  const [activeTab, setActiveTab] = useState("market");
 
-  const [currentPlayer, setCurrentPlayer] = useState(null)
+  const [cash, setCash] = useState(STARTING_CASH);
 
-  const [authMode, setAuthMode] = useState('login')
-  const [username, setUsername] = useState('')
-  const [pin, setPin] = useState('')
-  const [authMessage, setAuthMessage] = useState('')
-  const [authLoading, setAuthLoading] = useState(false)
+  const [prices, setPrices] = useState(() => {
+    const initial = {};
+    STOCKS.forEach((stock) => {
+      initial[stock.id] = stock.initialPrice;
+    });
+    return initial;
+  });
 
-  // =========================
-  // GAME
-  // =========================
+  const [holdings, setHoldings] = useState(() => {
+    const initial = {};
+    STOCKS.forEach((stock) => {
+      initial[stock.id] = 0;
+    });
+    return initial;
+  });
 
-  const [gameStarted, setGameStarted] = useState(false)
-  const [round, setRound] = useState(0)
+  const [round, setRound] = useState(1);
+  const [timeLeft, setTimeLeft] = useState(ROUND_TIME);
+  const [locked, setLocked] = useState(false);
+  const [roundResults, setRoundResults] = useState([]);
+  const [gameOver, setGameOver] = useState(false);
 
-  const [stocks, setStocks] = useState(
-    INITIAL_STOCKS.map((stock) => ({ ...stock }))
-  )
+  const [draggingStock, setDraggingStock] = useState(null);
+  const [dragX, setDragX] = useState(0);
 
-  const [cash, setCash] = useState(STARTING_CAPITAL)
+  const startX = useRef(0);
+  const currentX = useRef(0);
 
-  const [timer, setTimer] = useState(0)
-  const [decisionOpen, setDecisionOpen] = useState(false)
-  const [decisionLocked, setDecisionLocked] = useState(false)
+  const currentRound = ROUNDS[round - 1];
 
-  const [decisions, setDecisions] = useState({})
+  const portfolioValue = useMemo(() => {
+    return STOCKS.reduce(
+      (total, stock) =>
+        total + holdings[stock.id] * prices[stock.id],
+      cash
+    );
+  }, [cash, holdings, prices]);
 
-  const [revealed, setRevealed] = useState(false)
-  const [gameFinished, setGameFinished] = useState(false)
+  const startingPortfolioValue = STARTING_CASH;
 
-  // Portfolio value after every completed round.
-  const [portfolioHistory, setPortfolioHistory] = useState([
-    {
-      round: 0,
-      value: STARTING_CAPITAL,
-    },
-  ])
+  const profitLoss = portfolioValue - startingPortfolioValue;
 
-  // =========================
-  // TABS
-  // =========================
-
-  const [activeTab, setActiveTab] = useState('market')
-
-  // =========================
-  // SWIPE
-  // =========================
-
-  const touchStartX = useRef(null)
-  const touchStartY = useRef(null)
-
-  // =========================
-  // LOAD SAVED PLAYER
-  // =========================
-
-  useEffect(() => {
-    const savedPlayer = localStorage.getItem('stockMarketPlayer')
-
-    if (!savedPlayer) return
-
-    try {
-      const parsedPlayer = JSON.parse(savedPlayer)
-
-      if (parsedPlayer?.id && parsedPlayer?.username) {
-        setCurrentPlayer(parsedPlayer)
-      } else {
-        localStorage.removeItem('stockMarketPlayer')
-      }
-    } catch {
-      localStorage.removeItem('stockMarketPlayer')
-    }
-  }, [])
-
-  // =========================
-  // ACCOUNT HELPERS
-  // =========================
-
-  const showSupabaseError = (error, fallbackMessage) => {
-    console.error('Supabase error:', error)
-
-    if (!error) {
-      setAuthMessage(fallbackMessage)
-      return
-    }
-
-    if (error.code === '23505') {
-      setAuthMessage(
-        'That username already exists. Try a different username.'
-      )
-      return
-    }
-
-    if (error.code === '42501') {
-      setAuthMessage(
-        'Database permission blocked this action. Check the players table policies in Supabase.'
-      )
-      return
-    }
-
-    if (error.message) {
-      setAuthMessage(`Database error: ${error.message}`)
-      return
-    }
-
-    setAuthMessage(fallbackMessage)
-  }
-
-  // =========================
-  // CREATE ACCOUNT
-  // =========================
-
-  const createAccount = async () => {
-    const cleanUsername = username.trim()
-    const cleanPin = pin.trim()
-
-    setAuthMessage('')
-
-    if (!cleanUsername || !cleanPin) {
-      setAuthMessage('Please enter a username and PIN.')
-      return
-    }
-
-    if (cleanUsername.length < 3) {
-      setAuthMessage('Username must be at least 3 characters.')
-      return
-    }
-
-    if (cleanPin.length < 4) {
-      setAuthMessage('PIN must be at least 4 characters.')
-      return
-    }
-
-    setAuthLoading(true)
-
-    try {
-      const {
-        data: existingPlayer,
-        error: checkError,
-      } = await supabase
-        .from('players')
-        .select('id, username')
-        .eq('username', cleanUsername)
-        .maybeSingle()
-
-      if (checkError) {
-        showSupabaseError(
-          checkError,
-          'Could not check the username.'
-        )
-        return
-      }
-
-      if (existingPlayer) {
-        setAuthMessage(
-          'That username already exists. Try logging in.'
-        )
-        return
-      }
-
-      const {
-        data: newPlayer,
-        error: insertError,
-      } = await supabase
-        .from('players')
-        .insert({
-          username: cleanUsername,
-          pin: cleanPin,
-          score: STARTING_CAPITAL,
-        })
-        .select()
-        .single()
-
-      if (insertError) {
-        showSupabaseError(
-          insertError,
-          'Could not create the account.'
-        )
-        return
-      }
-
-      if (!newPlayer) {
-        setAuthMessage(
-          'Account creation succeeded, but no player data was returned.'
-        )
-        return
-      }
-
-      setCurrentPlayer(newPlayer)
-
-      localStorage.setItem(
-        'stockMarketPlayer',
-        JSON.stringify(newPlayer)
-      )
-
-      setUsername('')
-      setPin('')
-      setAuthMessage('')
-    } catch (error) {
-      console.error('Create account error:', error)
-
-      setAuthMessage(
-        error?.message
-          ? `Error: ${error.message}`
-          : 'Could not create the account. Please try again.'
-      )
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-
-  // =========================
-  // LOGIN
-  // =========================
-
-  const login = async () => {
-    const cleanUsername = username.trim()
-    const cleanPin = pin.trim()
-
-    setAuthMessage('')
-
-    if (!cleanUsername || !cleanPin) {
-      setAuthMessage('Please enter a username and PIN.')
-      return
-    }
-
-    setAuthLoading(true)
-
-    try {
-      const {
-        data: player,
-        error: loginError,
-      } = await supabase
-        .from('players')
-        .select('*')
-        .eq('username', cleanUsername)
-        .eq('pin', cleanPin)
-        .maybeSingle()
-
-      if (loginError) {
-        showSupabaseError(
-          loginError,
-          'Login failed. Please try again.'
-        )
-        return
-      }
-
-      if (!player) {
-        setAuthMessage('Incorrect username or PIN.')
-        return
-      }
-
-      setCurrentPlayer(player)
-
-      localStorage.setItem(
-        'stockMarketPlayer',
-        JSON.stringify(player)
-      )
-
-      setUsername('')
-      setPin('')
-      setAuthMessage('')
-    } catch (error) {
-      console.error('Login error:', error)
-
-      setAuthMessage(
-        error?.message
-          ? `Error: ${error.message}`
-          : 'Login failed. Please try again.'
-      )
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-
-  // =========================
-  // RESET GAME
-  // =========================
-
-  const resetGame = () => {
-    setGameStarted(false)
-    setRound(0)
-
-    setStocks(
-      INITIAL_STOCKS.map((stock) => ({
-        ...stock,
-      }))
-    )
-
-    setCash(STARTING_CAPITAL)
-    setTimer(0)
-    setDecisionOpen(false)
-    setDecisionLocked(false)
-    setDecisions({})
-    setRevealed(false)
-    setGameFinished(false)
-    setPortfolioHistory([
+  const portfolioHistory = useMemo(() => {
+    const history = [
       {
         round: 0,
-        value: STARTING_CAPITAL,
+        value: STARTING_CASH,
       },
-    ])
-    setActiveTab('market')
-  }
+    ];
 
-  // =========================
-  // LOGOUT
-  // =========================
+    roundResults.forEach((result) => {
+      history.push({
+        round: result.round,
+        value: result.portfolioValue,
+      });
+    });
 
-  const logout = () => {
-    localStorage.removeItem('stockMarketPlayer')
-    setCurrentPlayer(null)
-    resetGame()
-  }
+    if (
+      !gameOver &&
+      roundResults.length === 0
+    ) {
+      history.push({
+        round: 1,
+        value: portfolioValue,
+      });
+    }
 
-  // =========================
-  // START GAME
-  // =========================
-
-  const startGame = () => {
-    resetGame()
-    setGameStarted(true)
-  }
-
-  // =========================
-  // CURRENT ROUND
-  // =========================
-
-  const currentRound =
-    round > 0 ? ROUND_DATA[round - 1] : null
-
-  // =========================
-  // PORTFOLIO
-  // =========================
-
-  const stockValue = useMemo(() => {
-    return stocks.reduce(
-      (total, stock) =>
-        total + stock.price * stock.shares,
-      0
-    )
-  }, [stocks])
-
-  const portfolioValue = cash + stockValue
-
-  const profitLoss =
-    portfolioValue - STARTING_CAPITAL
-
-  // =========================
-  // TIMER
-  // =========================
+    return history;
+  }, [roundResults, portfolioValue, gameOver]);
 
   useEffect(() => {
-    if (
-      !decisionOpen ||
-      decisionLocked ||
-      timer <= 0
-    ) {
-      return
-    }
+    if (locked || gameOver) return;
 
-    const interval = setInterval(() => {
-      setTimer((previous) => {
+    const timer = setInterval(() => {
+      setTimeLeft((previous) => {
         if (previous <= 1) {
-          setDecisionLocked(true)
-          setDecisionOpen(false)
-          return 0
+          clearInterval(timer);
+          lockRound();
+          return 0;
         }
 
-        return previous - 1
-      })
-    }, 1000)
+        return previous - 1;
+      });
+    }, 1000);
 
-    return () => clearInterval(interval)
-  }, [decisionOpen, decisionLocked, timer])
+    return () => clearInterval(timer);
+  }, [locked, gameOver, round]);
 
-  // =========================
-  // START DECISION
-  // =========================
+  const lockRound = () => {
+    if (locked || gameOver) return;
 
-  const startDecision = () => {
-    if (!currentRound) return
+    setLocked(true);
 
-    setDecisions({})
-    setDecisionLocked(false)
-    setRevealed(false)
-    setTimer(currentRound.decisionTime)
-    setDecisionOpen(true)
-  }
+    setPrices(currentRound.prices);
 
-  // =========================
-  // UPDATE DECISION
-  // =========================
-
-  const updateDecision = (
-    stockId,
-    action,
-    quantity = 0
-  ) => {
-    if (
-      !decisionOpen ||
-      decisionLocked ||
-      revealed
-    ) {
-      return
-    }
-
-    setDecisions((previous) => ({
+    setRoundResults((previous) => [
       ...previous,
-      [stockId]: {
-        action,
-        quantity,
+      {
+        round,
+        prices: currentRound.prices,
+        portfolioValue,
       },
-    }))
-  }
+    ]);
 
-  // =========================
-  // BUY SHARES
-  // =========================
-
-  const buyShares = (stockId, quantity = 1) => {
-    if (
-      !decisionOpen ||
-      decisionLocked ||
-      revealed ||
-      quantity <= 0
-    ) {
-      return
+    if (round === ROUNDS.length) {
+      setGameOver(true);
     }
-
-    const stock = stocks.find(
-      (item) => item.id === stockId
-    )
-
-    if (!stock) return
-
-    const totalCost =
-      stock.price * quantity
-
-    if (totalCost > cash) {
-      return
-    }
-
-    setCash(
-      (previousCash) =>
-        previousCash - totalCost
-    )
-
-    setStocks((previousStocks) =>
-      previousStocks.map((item) => {
-        if (item.id !== stockId) {
-          return item
-        }
-
-        const oldShares = item.shares
-        const newShares =
-          oldShares + quantity
-
-        const oldInvestment =
-          oldShares * item.avgPrice
-
-        const newInvestment =
-          oldInvestment + totalCost
-
-        const newAveragePrice =
-          newShares > 0
-            ? newInvestment / newShares
-            : 0
-
-        return {
-          ...item,
-          shares: newShares,
-          avgPrice: newAveragePrice,
-        }
-      })
-    )
-
-    updateDecision(
-      stockId,
-      'BUY',
-      quantity
-    )
-  }
-
-  // =========================
-  // SELL SHARES
-  // =========================
-
-  const sellShares = (
-    stockId,
-    quantity = 1
-  ) => {
-    if (
-      !decisionOpen ||
-      decisionLocked ||
-      revealed ||
-      quantity <= 0
-    ) {
-      return
-    }
-
-    const stock = stocks.find(
-      (item) => item.id === stockId
-    )
-
-    if (!stock) return
-
-    if (quantity > stock.shares) {
-      return
-    }
-
-    const totalReceived =
-      stock.price * quantity
-
-    setCash(
-      (previousCash) =>
-        previousCash + totalReceived
-    )
-
-    setStocks((previousStocks) =>
-      previousStocks.map((item) => {
-        if (item.id !== stockId) {
-          return item
-        }
-
-        const newShares =
-          item.shares - quantity
-
-        return {
-          ...item,
-          shares: newShares,
-          avgPrice:
-            newShares === 0
-              ? 0
-              : item.avgPrice,
-        }
-      })
-    )
-
-    updateDecision(
-      stockId,
-      'SELL',
-      quantity
-    )
-  }
-
-  // =========================
-  // HOLD
-  // =========================
-
-  const holdStock = (stockId) => {
-    if (
-      !decisionOpen ||
-      decisionLocked ||
-      revealed
-    ) {
-      return
-    }
-
-    updateDecision(
-      stockId,
-      'HOLD',
-      0
-    )
-  }
-
-  // =========================
-  // SWIPE HANDLERS
-  // =========================
-
-  const handleTouchStart = (event) => {
-    const touch = event.touches[0]
-
-    touchStartX.current = touch.clientX
-    touchStartY.current = touch.clientY
-  }
-
-  const handleTouchEnd = (event, stock) => {
-    if (
-      touchStartX.current === null ||
-      touchStartY.current === null
-    ) {
-      return
-    }
-
-    const touch = event.changedTouches[0]
-
-    const deltaX =
-      touch.clientX - touchStartX.current
-
-    const deltaY =
-      touch.clientY - touchStartY.current
-
-    touchStartX.current = null
-    touchStartY.current = null
-
-    // Ignore mostly vertical movement.
-    if (Math.abs(deltaX) < 70) return
-    if (Math.abs(deltaY) > Math.abs(deltaX)) return
-
-    if (
-      !decisionOpen ||
-      decisionLocked ||
-      revealed
-    ) {
-      return
-    }
-
-    if (deltaX > 0) {
-      if (cash >= stock.price) {
-        buyShares(stock.id, 1)
-      }
-    } else {
-      if (stock.shares > 0) {
-        sellShares(stock.id, 1)
-      }
-    }
-  }
-
-  // =========================
-  // LOCK DECISIONS
-  // =========================
-
-  const lockDecision = () => {
-    setDecisionLocked(true)
-    setDecisionOpen(false)
-    setTimer(0)
-  }
-
-  // =========================
-  // REVEAL MARKET
-  // =========================
-
-  const revealPrices = () => {
-    if (!currentRound || revealed) {
-      return
-    }
-
-    setDecisionLocked(true)
-    setDecisionOpen(false)
-    setTimer(0)
-
-    const newStocks = stocks.map((stock) => ({
-      ...stock,
-      price:
-        currentRound.prices[stock.id] ??
-        stock.price,
-    }))
-
-    setStocks(newStocks)
-
-    const newStockValue = newStocks.reduce(
-      (total, stock) =>
-        total + stock.price * stock.shares,
-      0
-    )
-
-    const newPortfolioValue =
-      cash + newStockValue
-
-    setPortfolioHistory((previous) => {
-      const existing = previous.find(
-        (item) => item.round === round
-      )
-
-      if (existing) {
-        return previous.map((item) =>
-          item.round === round
-            ? {
-                round,
-                value: newPortfolioValue,
-              }
-            : item
-        )
-      }
-
-      return [
-        ...previous,
-        {
-          round,
-          value: newPortfolioValue,
-        },
-      ]
-    })
-
-    setRevealed(true)
-  }
-
-  // =========================
-  // NEXT ROUND
-  // =========================
+  };
 
   const nextRound = () => {
-    if (round >= ROUND_DATA.length) {
-      finishGame()
-      return
+    if (!locked || gameOver) return;
+
+    if (round >= ROUNDS.length) {
+      setGameOver(true);
+      return;
     }
 
-    setRound(
-      (previous) =>
-        previous + 1
-    )
+    const nextRoundNumber = round + 1;
 
-    setDecisionLocked(false)
-    setRevealed(false)
-    setDecisions({})
-    setTimer(0)
-    setActiveTab('market')
-  }
+    setRound(nextRoundNumber);
+    setTimeLeft(ROUND_TIME);
+    setLocked(false);
+    setDragX(0);
+    setActiveTab("market");
+  };
 
-  // =========================
-  // FINISH GAME
-  // =========================
+  const buyOne = (stockId) => {
+    if (locked || gameOver) return;
 
-  const finishGame = async () => {
-    setGameFinished(true)
+    const price = prices[stockId];
 
-    if (!currentPlayer?.id) {
-      return
+    if (cash < price) return;
+
+    setCash((previous) => previous - price);
+
+    setHoldings((previous) => ({
+      ...previous,
+      [stockId]: previous[stockId] + 1,
+    }));
+  };
+
+  const sellOne = (stockId) => {
+    if (locked || gameOver) return;
+
+    if (holdings[stockId] <= 0) return;
+
+    const price = prices[stockId];
+
+    setCash((previous) => previous + price);
+
+    setHoldings((previous) => ({
+      ...previous,
+      [stockId]: previous[stockId] - 1,
+    }));
+  };
+
+  const handlePointerDown = (event, stockId) => {
+    if (locked || gameOver) return;
+
+    startX.current = event.clientX;
+    currentX.current = event.clientX;
+
+    setDraggingStock(stockId);
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event) => {
+    if (!draggingStock) return;
+
+    currentX.current = event.clientX;
+
+    const distance = currentX.current - startX.current;
+
+    setDragX(Math.max(-150, Math.min(150, distance)));
+  };
+
+  const handlePointerUp = () => {
+    if (!draggingStock) return;
+
+    const distance = currentX.current - startX.current;
+
+    if (distance >= 80) {
+      buyOne(draggingStock);
+    } else if (distance <= -80) {
+      sellOne(draggingStock);
     }
 
-    try {
-      const {
-        error,
-      } = await supabase
-        .from('players')
-        .update({
-          score: Math.round(
-            portfolioValue
-          ),
-        })
-        .eq(
-          'id',
-          currentPlayer.id
-        )
+    setDraggingStock(null);
+    setDragX(0);
+  };
 
-      if (error) {
-        console.error(
-          'Could not save final score:',
-          error
-        )
-      }
-    } catch (error) {
-      console.error(
-        'Could not save final score:',
-        error
-      )
-    }
-  }
+  const renderGraph = () => {
+    const history =
+      roundResults.length > 0
+        ? [
+            { round: 0, value: STARTING_CASH },
+            ...roundResults.map((item) => ({
+              round: item.round,
+              value: item.portfolioValue,
+            })),
+          ]
+        : [{ round: 0, value: STARTING_CASH }];
 
-  // =========================
-  // LEADERBOARD
-  // =========================
+    const width = 700;
+    const height = 300;
+    const padding = 40;
 
-  const [leaderboard, setLeaderboard] = useState([])
-  const [leaderboardLoading, setLeaderboardLoading] =
-    useState(false)
+    const values = history.map((item) => item.value);
 
-  const loadLeaderboard = async () => {
-    setLeaderboardLoading(true)
-
-    try {
-      const {
-        data,
-        error,
-      } = await supabase
-        .from('players')
-        .select('id, username, score')
-        .order('score', {
-          ascending: false,
-        })
-
-      if (error) {
-        console.error(
-          'Leaderboard error:',
-          error
-        )
-        return
-      }
-
-      setLeaderboard(data || [])
-    } catch (error) {
-      console.error(
-        'Leaderboard error:',
-        error
-      )
-    } finally {
-      setLeaderboardLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (
-      activeTab === 'leaderboard' &&
-      currentPlayer
-    ) {
-      loadLeaderboard()
-    }
-  }, [activeTab, currentPlayer])
-
-  // =========================
-  // GRAPH
-  // =========================
-
-  const graph = useMemo(() => {
-    const width = 900
-    const height = 300
-    const padding = 35
-
-    const values = portfolioHistory.map(
-      (item) => item.value
-    )
-
-    if (values.length === 0) {
-      return null
-    }
-
-    const minValue = Math.min(...values)
-    const maxValue = Math.max(...values)
+    const minValue = Math.min(...values, STARTING_CASH);
+    const maxValue = Math.max(...values, STARTING_CASH);
 
     const range =
-      maxValue - minValue || 1
+      maxValue - minValue === 0
+        ? 1
+        : maxValue - minValue;
 
-    const points = portfolioHistory.map(
-      (item, index) => {
-        const x =
-          padding +
-          (index /
-            Math.max(
-              portfolioHistory.length - 1,
-              1
-            )) *
-            (width - padding * 2)
+    const points = history.map((item, index) => {
+      const x =
+        history.length === 1
+          ? width / 2
+          : padding +
+            (index / (history.length - 1)) *
+              (width - padding * 2);
 
-        const y =
-          height -
-          padding -
-          ((item.value - minValue) /
-            range) *
-            (height - padding * 2)
+      const y =
+        height -
+        padding -
+        ((item.value - minValue) / range) *
+          (height - padding * 2);
 
-        return {
-          x,
-          y,
-          round: item.round,
-          value: item.value,
-        }
-      }
-    )
+      return {
+        ...item,
+        x,
+        y,
+      };
+    });
 
-    const linePoints = points
-      .map(
-        (point) =>
-          `${point.x},${point.y}`
+    const path = points
+      .map((point, index) =>
+        `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`
       )
-      .join(' ')
+      .join(" ");
 
-    return {
-      width,
-      height,
-      points,
-      linePoints,
-    }
-  }, [portfolioHistory])
-
-  // =========================
-  // LOGIN SCREEN
-  // =========================
-
-  if (!currentPlayer) {
     return (
-      <div className="app">
-        <div className="auth-container">
-          <div className="auth-card">
+      <div className="graph-container">
+        <svg
+          className="portfolio-graph"
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="none"
+        >
+          <line
+            x1={padding}
+            y1={height - padding}
+            x2={width - padding}
+            y2={height - padding}
+            className="graph-axis"
+          />
 
-            <div className="auth-logo">
-              +
-            </div>
+          <line
+            x1={padding}
+            y1={padding}
+            x2={padding}
+            y2={height - padding}
+            className="graph-axis"
+          />
 
-            <h1>
-              StockMarket
-            </h1>
+          <path
+            d={path}
+            fill="none"
+            className="graph-line"
+          />
 
-            <p className="auth-subtitle">
-              Learn. Trade. Think.
-            </p>
-
-            <div className="auth-tabs">
-
-              <button
-                className={
-                  authMode === 'login'
-                    ? 'auth-tab active'
-                    : 'auth-tab'
-                }
-                onClick={() => {
-                  setAuthMode('login')
-                  setAuthMessage('')
-                }}
-              >
-                Login
-              </button>
-
-              <button
-                className={
-                  authMode === 'create'
-                    ? 'auth-tab active'
-                    : 'auth-tab'
-                }
-                onClick={() => {
-                  setAuthMode('create')
-                  setAuthMessage('')
-                }}
-              >
-                Create Account
-              </button>
-
-            </div>
-
-            <div className="auth-form">
-
-              <label>
-                Username
-              </label>
-
-              <input
-                type="text"
-                placeholder="Enter username"
-                value={username}
-                autoComplete="username"
-                onChange={(event) =>
-                  setUsername(
-                    event.target.value
-                  )
-                }
-                onKeyDown={(event) => {
-                  if (
-                    event.key === 'Enter'
-                  ) {
-                    authMode === 'login'
-                      ? login()
-                      : createAccount()
-                  }
-                }}
+          {points.map((point) => (
+            <g key={point.round}>
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="6"
+                className="graph-point"
               />
 
-              <label>
-                PIN
-              </label>
-
-              <input
-                type="password"
-                inputMode="numeric"
-                placeholder="Enter PIN"
-                value={pin}
-                autoComplete={
-                  authMode === 'login'
-                    ? 'current-password'
-                    : 'new-password'
-                }
-                onChange={(event) =>
-                  setPin(
-                    event.target.value
-                  )
-                }
-                onKeyDown={(event) => {
-                  if (
-                    event.key === 'Enter'
-                  ) {
-                    authMode === 'login'
-                      ? login()
-                      : createAccount()
-                  }
-                }}
-              />
-
-              {authMessage && (
-                <div className="auth-message">
-                  {authMessage}
-                </div>
-              )}
-
-              <button
-                className="auth-submit"
-                disabled={
-                  authLoading
-                }
-                onClick={
-                  authMode === 'login'
-                    ? login
-                    : createAccount
-                }
+              <text
+                x={point.x}
+                y={height - 15}
+                textAnchor="middle"
+                className="graph-label"
               >
-                {authLoading
-                  ? 'PLEASE WAIT...'
-                  : authMode === 'login'
-                  ? 'LOGIN'
-                  : 'CREATE ACCOUNT'}
-              </button>
-
-            </div>
-
-            <p className="auth-note">
-              Your account identifies you
-              on the leaderboard.
-            </p>
-
-          </div>
-        </div>
+                {point.round === 0
+                  ? "Start"
+                  : `R${point.round}`}
+              </text>
+            </g>
+          ))}
+        </svg>
       </div>
-    )
-  }
+    );
+  };
 
-  // =========================
-  // GAME START
-  // =========================
-
-  if (!gameStarted) {
+  if (gameOver) {
     return (
       <div className="app">
-        <div className="game-start">
-
-          <div className="game-logo">
-            +
-          </div>
-
-          <h1>
-            STOCK MARKET LIVE
-          </h1>
-
-          <p className="player-welcome">
-            Welcome,{' '}
-            <strong>
-              {currentPlayer.username}
-            </strong>
-          </p>
-
-          <div className="starting-capital">
-            <span>
-              STARTING CAPITAL
-            </span>
-
-            <strong>
-              {formatMoney(
-                STARTING_CAPITAL
-              )}
-            </strong>
-          </div>
-
-          <div className="game-rules-preview">
-
-            <div>
-              <strong>
-                MARKET NEWS
-              </strong>
-              <span>
-                React to information
-              </span>
-            </div>
-
-            <div>
-              <strong>
-                TIMED DECISIONS
-              </strong>
-              <span>
-                30 seconds
-              </span>
-            </div>
-
-            <div>
-              <strong>
-                HIDDEN PRICES
-              </strong>
-              <span>
-                Think before trading
-              </span>
-            </div>
-
-            <div>
-              <strong>
-                FINAL RANKING
-              </strong>
-              <span>
-                Highest portfolio wins
-              </span>
-            </div>
-
-          </div>
-
-          <button
-            className="start-game-button"
-            onClick={startGame}
-          >
-            START GAME
-          </button>
-
-          <button
-            className="logout-button"
-            onClick={logout}
-          >
-            Logout
-          </button>
-
-        </div>
-      </div>
-    )
-  }
-
-  // =========================
-  // FINAL SCREEN
-  // =========================
-
-  if (gameFinished) {
-    return (
-      <div className="app">
-
-        <header className="game-header">
-
-          <div>
-            <span className="game-label">
-              STOCK MARKET LIVE
-            </span>
-
-            <h1>
+        <div className="game-container final-screen">
+          <div className="top-header">
+            <h1>Stock Market Live</h1>
+            <span className="market-status">
               MARKET CLOSED
-            </h1>
-
-            <p>
-              Investor:{' '}
-              <strong>
-                {currentPlayer.username}
-              </strong>
-            </p>
-          </div>
-
-          <div className="header-stats">
-            <div>
-              <span>
-                FINAL VALUE
-              </span>
-
-              <strong>
-                {formatMoney(
-                  portfolioValue
-                )}
-              </strong>
-            </div>
-          </div>
-
-        </header>
-
-        <main className="game-main final-main">
-
-          <section className="final-card">
-
-            <span>
-              FINAL PORTFOLIO VALUE
             </span>
+          </div>
 
-            <strong>
-              {formatMoney(
-                portfolioValue
-              )}
-            </strong>
+          <div className="final-summary">
+            <h2>Your Final Portfolio</h2>
+
+            <div className="final-value">
+              ₹{portfolioValue.toLocaleString("en-IN")}
+            </div>
 
             <div
               className={
                 profitLoss >= 0
-                  ? 'final-profit positive'
-                  : 'final-profit negative'
+                  ? "profit final-profit"
+                  : "loss final-profit"
               }
             >
-              {profitLoss >= 0
-                ? '▲'
-                : '▼'}{' '}
-              {formatMoney(
-                Math.abs(
-                  profitLoss
-                )
-              )}{' '}
-              {profitLoss >= 0
-                ? 'PROFIT'
-                : 'LOSS'}
+              {profitLoss >= 0 ? "+" : ""}
+              ₹{profitLoss.toLocaleString("en-IN")}
             </div>
 
-          </section>
-
-          <section className="portfolio-chart final-chart">
-
-            <h2>
-              PORTFOLIO PERFORMANCE
-            </h2>
-
-            <p>
-              Portfolio value after each completed round.
-            </p>
-
-            <div className="chart-container">
-
-              {graph && (
-                <svg
-                  className="portfolio-svg"
-                  viewBox={`0 0 ${graph.width} ${graph.height}`}
-                  preserveAspectRatio="none"
-                >
-                  <polyline
-                    points={graph.linePoints}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-
-                  {graph.points.map(
-                    (point) => (
-                      <g
-                        key={point.round}
-                      >
-                        <circle
-                          cx={point.x}
-                          cy={point.y}
-                          r="7"
-                          fill="currentColor"
-                        />
-
-                        <text
-                          x={point.x}
-                          y={
-                            point.y -
-                            14
-                          }
-                          textAnchor="middle"
-                          className="graph-label"
-                        >
-                          R{point.round}
-                        </text>
-                      </g>
-                    )
-                  )}
-                </svg>
-              )}
-
+            <div className="final-label">
+              {profitLoss >= 0
+                ? "Profit"
+                : "Loss"}
             </div>
+          </div>
 
-            <div className="chart-values">
+          {renderGraph()}
 
-              {portfolioHistory.map(
-                (item) => (
-                  <span
-                    key={item.round}
-                  >
-                    Round {item.round}:{' '}
-                    <strong>
-                      {formatMoney(
-                        item.value
-                      )}
-                    </strong>
+          <div className="final-holdings">
+            {STOCKS.map((stock) => (
+              <div
+                className="final-stock"
+                key={stock.id}
+              >
+                <div>
+                  <strong>{stock.name}</strong>
+                  <span>
+                    {holdings[stock.id]} shares
                   </span>
-                )
-              )}
+                </div>
 
-            </div>
-
-          </section>
-
-          <button
-            className="start-game-button"
-            onClick={resetGame}
-          >
-            PLAY AGAIN
-          </button>
-
-          <button
-            className="logout-button"
-            onClick={logout}
-          >
-            Logout
-          </button>
-
-        </main>
-
+                <strong>
+                  ₹
+                  {(
+                    holdings[stock.id] *
+                    prices[stock.id]
+                  ).toLocaleString("en-IN")}
+                </strong>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    )
+    );
   }
-
-  // =========================
-  // MAIN GAME
-  // =========================
 
   return (
     <div className="app">
-
-      <header className="game-header">
-
-        <div>
-
-          <span className="game-label">
-            STOCK MARKET LIVE
-          </span>
-
-          <h1>
-            {round === 0
-              ? 'MARKET OPEN'
-              : `ROUND ${round} / ${ROUND_DATA.length}`}
-          </h1>
-
-          <p>
-            Investor:{' '}
-            <strong>
-              {currentPlayer.username}
-            </strong>
-          </p>
-
-        </div>
-
-        <div className="header-stats">
-
+      <div className="game-container">
+        <header className="top-header">
           <div>
-            <span>
-              CASH
-            </span>
-
-            <strong>
-              {formatMoney(cash)}
-            </strong>
+            <h1>Stock Market Live</h1>
+            <p>Round {round} of 4</p>
           </div>
 
-          <div>
-            <span>
-              VALUE
-            </span>
-
-            <strong>
-              {formatMoney(
-                portfolioValue
-              )}
-            </strong>
+          <div className="cash-display">
+            ₹{cash.toLocaleString("en-IN")}
           </div>
-
-        </div>
-
-      </header>
-
-      {/* TABS */}
-
-      <nav className="tabs">
-
-        <button
-          className={
-            activeTab === 'market'
-              ? 'tab active'
-              : 'tab'
-          }
-          onClick={() =>
-            setActiveTab('market')
-          }
-        >
-          MARKET
-        </button>
-
-        <button
-          className={
-            activeTab === 'portfolio'
-              ? 'tab active'
-              : 'tab'
-          }
-          onClick={() =>
-            setActiveTab('portfolio')
-          }
-        >
-          PORTFOLIO
-        </button>
-
-        <button
-          className={
-            activeTab === 'leaderboard'
-              ? 'tab active'
-              : 'tab'
-          }
-          onClick={() =>
-            setActiveTab('leaderboard')
-          }
-        >
-          LEADERBOARD
-        </button>
-
-      </nav>
-
-      <main className="game-main">
-
-        {/* =========================
-            MARKET TAB
-        ========================= */}
-
-        {activeTab === 'market' && (
-
-          <>
-            {/* MARKET OPEN */}
-
-            {round === 0 && (
-              <section className="market-open-card">
-
-                <div className="round-number">
-                  ROUND 1
-                </div>
-
-                <h2>
-                  MARKET OPEN
-                </h2>
-
-                <p>
-                  Study the companies before
-                  the first market event.
-                </p>
-
-                <div className="stock-grid">
-
-                  {stocks.map((stock) => (
-                    <div
-                      className="stock-card"
-                      key={stock.id}
-                    >
-
-                      <div className="stock-info">
-                        <div className="stock-icon">
-                          {stock.symbol}
-                        </div>
-
-                        <div>
-                          <h3>
-                            {stock.name}
-                          </h3>
-
-                          <p>
-                            {stock.symbol}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="stock-price">
-                        <strong>
-                          {formatMoney(
-                            stock.price
-                          )}
-                        </strong>
-                      </div>
-
-                    </div>
-                  ))}
-
-                </div>
-
-                <button
-                  className="primary-button"
-                  onClick={() =>
-                    setRound(1)
-                  }
-                >
-                  CONTINUE
-                </button>
-
-              </section>
-            )}
-
-            {/* CURRENT ROUND */}
-
-            {round > 0 && currentRound && (
-
-              <>
-
-                <section className="news-card">
-
-                  <div className="news-badge">
-                    {currentRound.title}
-                  </div>
-
-                  <h2>
-                    {currentRound.news}
-                  </h2>
-
-                </section>
-
-                {!decisionOpen &&
-                  !decisionLocked &&
-                  !revealed && (
-                    <section className="decision-start">
-
-                      <div className="round-number">
-                        ROUND {round}
-                      </div>
-
-                      <h2>
-                        Ready to trade?
-                      </h2>
-
-                      <p>
-                        Swipe right to buy.
-                        Swipe left to sell.
-                        Hold if you want to keep your position.
-                      </p>
-
-                      <button
-                        className="primary-button"
-                        onClick={
-                          startDecision
-                        }
-                      >
-                        START 30s TIMER
-                      </button>
-
-                    </section>
-                  )}
-
-                {decisionOpen && (
-
-                  <section className="decision-section">
-
-                    <div className="trading-status">
-
-                      <div className="timer-box">
-                        <span>
-                          TIME
-                        </span>
-
-                        <strong>
-                          {timer}s
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>
-                          CASH
-                        </span>
-
-                        <strong>
-                          {formatMoney(
-                            cash
-                          )}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>
-                          PORTFOLIO
-                        </span>
-
-                        <strong>
-                          {formatMoney(
-                            portfolioValue
-                          )}
-                        </strong>
-                      </div>
-
-                    </div>
-
-                    <div className="decision-heading">
-
-                      <div>
-                        <span className="round-number">
-                          YOUR MOVE
-                        </span>
-
-                        <h2>
-                          TRADE
-                        </h2>
-                      </div>
-
-                      <div className="timer-large">
-                        {timer}
-                      </div>
-
-                    </div>
-
-                    <div className="swipe-help">
-
-                      <span className="swipe-sell">
-                        SWIPE LEFT TO SELL
-                      </span>
-
-                      <span>
-                        HOLD
-                      </span>
-
-                      <span className="swipe-buy">
-                        SWIPE RIGHT TO BUY
-                      </span>
-
-                    </div>
-
-                    <div className="decision-grid">
-
-                      {stocks.map((stock) => {
-
-                        const selected =
-                          decisions[
-                            stock.id
-                          ]
-
-                        const selectedAction =
-                          selected?.action
-
-                        const selectedQuantity =
-                          selected?.quantity ||
-                          0
-
-                        const maxBuy =
-                          Math.floor(
-                            cash /
-                              stock.price
-                          )
-
-                        return (
-
-                          <div
-                            className={
-                              selectedAction
-                                ? 'decision-card chosen'
-                                : 'decision-card'
-                            }
-                            key={stock.id}
-                            onTouchStart={
-                              handleTouchStart
-                            }
-                            onTouchEnd={(
-                              event
-                            ) =>
-                              handleTouchEnd(
-                                event,
-                                stock
-                              )
-                            }
-                          >
-
-                            <div className="swipe-track">
-                              <span>
-                                SELL
-                              </span>
-
-                              <span>
-                                SWIPE
-                              </span>
-
-                              <span>
-                                BUY
-                              </span>
-                            </div>
-
-                            <div className="decision-company">
-
-                              <div className="decision-icon">
-                                {stock.symbol}
-                              </div>
-
-                              <div className="company-info">
-
-                                <strong>
-                                  {stock.name}
-                                </strong>
-
-                                <span className="company-price">
-                                  {formatMoney(
-                                    stock.price
-                                  )}{' '}
-                                  / share
-                                </span>
-
-                                <span className="owned-count">
-                                  Owned:{' '}
-                                  <b>
-                                    {
-                                      stock.shares
-                                    }
-                                  </b>
-                                </span>
-
-                              </div>
-
-                            </div>
-
-                            <div className="quantity-area">
-
-                              <span>
-                                QUANTITY
-                              </span>
-
-                              <div className="quantity-controls">
-
-                                <button
-                                  type="button"
-                                  disabled={
-                                    selectedQuantity <=
-                                    0
-                                  }
-                                  onClick={() => {
-
-                                    const newQuantity =
-                                      Math.max(
-                                        0,
-                                        selectedQuantity -
-                                          1
-                                      )
-
-                                    updateDecision(
-                                      stock.id,
-                                      selectedAction ||
-                                        'BUY',
-                                      newQuantity
-                                    )
-                                  }}
-                                >
-                                  -
-                                </button>
-
-                                <strong>
-                                  {
-                                    selectedQuantity
-                                  }
-                                </strong>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-
-                                    const max =
-                                      selectedAction ===
-                                      'SELL'
-                                        ? stock.shares
-                                        : maxBuy
-
-                                    if (
-                                      selectedQuantity <
-                                      max
-                                    ) {
-                                      updateDecision(
-                                        stock.id,
-                                        selectedAction ||
-                                          'BUY',
-                                        selectedQuantity +
-                                          1
-                                      )
-                                    }
-                                  }}
-                                >
-                                  +
-                                </button>
-
-                              </div>
-
-                            </div>
-
-                            <div className="decision-buttons">
-
-                              <button
-                                type="button"
-                                className={
-                                  selectedAction ===
-                                  'BUY'
-                                    ? 'decision-button buy selected'
-                                    : 'decision-button buy'
-                                }
-                                disabled={
-                                  maxBuy <=
-                                  0
-                                }
-                                onClick={() =>
-                                  buyShares(
-                                    stock.id,
-                                    1
-                                  )
-                                }
-                              >
-                                BUY
-                              </button>
-
-                              <button
-                                type="button"
-                                className={
-                                  selectedAction ===
-                                  'HOLD'
-                                    ? 'decision-button hold selected'
-                                    : 'decision-button hold'
-                                }
-                                onClick={() =>
-                                  holdStock(
-                                    stock.id
-                                  )
-                                }
-                              >
-                                HOLD
-                              </button>
-
-                              <button
-                                type="button"
-                                className={
-                                  selectedAction ===
-                                  'SELL'
-                                    ? 'decision-button sell selected'
-                                    : 'decision-button sell'
-                                }
-                                disabled={
-                                  stock.shares <=
-                                  0
-                                }
-                                onClick={() =>
-                                  sellShares(
-                                    stock.id,
-                                    1
-                                  )
-                                }
-                              >
-                                SELL
-                              </button>
-
-                            </div>
-
-                            {selectedAction && (
-                              <div className="selected-decision">
-
-                                {selectedAction ===
-                                  'BUY' &&
-                                selectedQuantity >
-                                  0
-                                  ? `Buying ${selectedQuantity} share${selectedQuantity === 1 ? '' : 's'}`
-                                  : selectedAction ===
-                                      'SELL' &&
-                                    selectedQuantity >
-                                      0
-                                  ? `Selling ${selectedQuantity} share${selectedQuantity === 1 ? '' : 's'}`
-                                  : 'Holding position'}
-
-                              </div>
-                            )}
-
-                          </div>
-                        )
-                      })}
-
-                    </div>
-
-                    <button
-                      className="lock-button"
-                      onClick={
-                        lockDecision
-                      }
-                    >
-                      LOCK DECISIONS
-                    </button>
-
-                  </section>
-                )}
-
-                {decisionLocked &&
-                  !revealed && (
-                    <section className="locked-card">
-
-                      <div className="locked-icon">
-                        LOCKED
-                      </div>
-
-                      <h2>
-                        DECISIONS LOCKED
-                      </h2>
-
-                      <p>
-                        Your choices are final.
-                      </p>
-
-                      <button
-                        className="primary-button"
-                        onClick={
-                          revealPrices
-                        }
-                      >
-                        REVEAL MARKET
-                      </button>
-
-                    </section>
-                  )}
-
-                {revealed && (
-
-                  <section className="reveal-section">
-
-                    <div className="reveal-title">
-                      MARKET MOVES
-                    </div>
-
-                    <div className="price-table">
-
-                      <div className="price-row header-row">
-                        <span>
-                          STOCK
-                        </span>
-
-                        <span>
-                          BEFORE
-                        </span>
-
-                        <span>
-                          AFTER
-                        </span>
-                      </div>
-
-                      {stocks.map((stock) => {
-
-                        const before =
-                          currentRound.id === 1
-                            ? 100
-                            : ROUND_DATA[
-                                currentRound.id -
-                                  2
-                              ].prices[
-                                stock.id
-                              ]
-
-                        const change =
-                          stock.price -
-                          before
-
-                        return (
-
-                          <div
-                            className="price-row"
-                            key={stock.id}
-                          >
-
-                            <span>
-                              {stock.name}
-                            </span>
-
-                            <span>
-                              {formatMoney(
-                                before
-                              )}
-                            </span>
-
-                            <span
-                              className={
-                                change >= 0
-                                  ? 'price-up'
-                                  : 'price-down'
-                              }
-                            >
-                              {change >= 0
-                                ? '▲ '
-                                : '▼ '}
-
-                              {formatMoney(
-                                stock.price
-                              )}
-                            </span>
-
-                          </div>
-                        )
-                      })}
-
-                    </div>
-
-                    <div className="round-reasons">
-
-                      <h2>
-                        WHY THE MARKET MOVED
-                      </h2>
-
-                      {stocks.map(
-                        (stock) => (
-                          <div
-                            className="reason-row"
-                            key={stock.id}
-                          >
-                            <strong>
-                              {stock.name}
-                            </strong>
-
-                            <span>
-                              {
-                                currentRound
-                                  .reasons[
-                                  stock.id
-                                ]
-                              }
-                            </span>
-                          </div>
-                        )
-                      )}
-
-                    </div>
-
-                    <div className="portfolio-summary">
-
-                      <h2>
-                        YOUR PORTFOLIO
-                      </h2>
-
-                      <div className="summary-grid">
-
-                        <div>
-                          <span>
-                            Cash
-                          </span>
-
-                          <strong>
-                            {formatMoney(
-                              cash
-                            )}
-                          </strong>
-                        </div>
-
-                        <div>
-                          <span>
-                            Shares
-                          </span>
-
-                          <strong>
-                            {formatMoney(
-                              stockValue
-                            )}
-                          </strong>
-                        </div>
-
-                        <div>
-                          <span>
-                            Total
-                          </span>
-
-                          <strong>
-                            {formatMoney(
-                              portfolioValue
-                            )}
-                          </strong>
-                        </div>
-
-                      </div>
-
-                    </div>
-
-                    <button
-                      className="primary-button"
-                      onClick={() => {
-
-                        if (
-                          round >=
-                          ROUND_DATA.length
-                        ) {
-                          finishGame()
-                        } else {
-                          nextRound()
-                        }
-
-                      }}
-                    >
-                      {round >=
-                      ROUND_DATA.length
-                        ? 'MARKET CLOSED'
-                        : 'NEXT ROUND'}
-                    </button>
-
-                  </section>
-                )}
-
-              </>
-            )}
-
-          </>
-        )}
-
-        {/* =========================
-            PORTFOLIO TAB
-        ========================= */}
-
-        {activeTab === 'portfolio' && (
-
-          <section className="portfolio-page">
-
-            <div className="portfolio-header">
-
+        </header>
+
+        <nav className="tabs">
+          <button
+            className={
+              activeTab === "market"
+                ? "tab active"
+                : "tab"
+            }
+            onClick={() => setActiveTab("market")}
+          >
+            Market
+          </button>
+
+          <button
+            className={
+              activeTab === "portfolio"
+                ? "tab active"
+                : "tab"
+            }
+            onClick={() =>
+              setActiveTab("portfolio")
+            }
+          >
+            Portfolio
+          </button>
+
+          <button
+            className={
+              activeTab === "leaderboard"
+                ? "tab active"
+                : "tab"
+            }
+            onClick={() =>
+              setActiveTab("leaderboard")
+            }
+          >
+            Leaderboard
+          </button>
+        </nav>
+
+        {activeTab === "market" && (
+          <main className="market-page">
+            <div className="round-header">
               <div>
-                <span className="game-label">
-                  YOUR PORTFOLIO
+                <span className="round-number">
+                  ROUND {round}
                 </span>
 
                 <h2>
-                  {formatMoney(
-                    portfolioValue
-                  )}
+                  {currentRound.headline}
                 </h2>
               </div>
 
               <div
                 className={
-                  profitLoss >= 0
-                    ? 'portfolio-profit positive'
-                    : 'portfolio-profit negative'
+                  timeLeft <= 5
+                    ? "timer danger"
+                    : "timer"
                 }
               >
-                {profitLoss >= 0
-                  ? '+'
-                  : '-'}
-                {formatMoney(
-                  Math.abs(
-                    profitLoss
-                  )
-                )}
+                {timeLeft}s
               </div>
-
             </div>
 
-            <section className="portfolio-chart">
+            <div className="swipe-instructions">
+              <span className="sell-guide">
+                SWIPE LEFT TO SELL
+              </span>
 
-              <h2>
-                PERFORMANCE
-              </h2>
+              <span className="hold-guide">
+                HOLD
+              </span>
 
-              <p>
-                Portfolio value after each round.
-              </p>
+              <span className="buy-guide">
+                SWIPE RIGHT TO BUY
+              </span>
+            </div>
 
-              <div className="chart-container">
+            <div className="stock-list">
+              {STOCKS.map((stock) => {
+                const price =
+                  prices[stock.id];
 
-                {graph && (
-                  <svg
-                    className="portfolio-svg"
-                    viewBox={`0 0 ${graph.width} ${graph.height}`}
-                    preserveAspectRatio="none"
-                  >
-                    <polyline
-                      points={
-                        graph.linePoints
-                      }
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
+                const nextPrice =
+                  currentRound.prices[
+                    stock.id
+                  ];
 
-                    {graph.points.map(
-                      (point) => (
-                        <g
-                          key={point.round}
-                        >
-                          <circle
-                            cx={point.x}
-                            cy={point.y}
-                            r="7"
-                            fill="currentColor"
-                          />
+                const difference =
+                  nextPrice - price;
 
-                          <text
-                            x={point.x}
-                            y={
-                              point.y -
-                              14
-                            }
-                            textAnchor="middle"
-                            className="graph-label"
-                          >
-                            R{point.round}
-                          </text>
-                        </g>
-                      )
-                    )}
-                  </svg>
-                )}
+                const direction =
+                  difference > 0
+                    ? "up"
+                    : difference < 0
+                    ? "down"
+                    : "same";
 
-              </div>
+                const isDragging =
+                  draggingStock === stock.id;
 
-              <div className="chart-values">
-
-                {portfolioHistory.map(
-                  (item) => (
-                    <span
-                      key={item.round}
-                    >
-                      Round {item.round}:{' '}
-                      <strong>
-                        {formatMoney(
-                          item.value
-                        )}
-                      </strong>
-                    </span>
-                  )
-                )}
-
-              </div>
-
-            </section>
-
-            <section className="market">
-
-              <div className="market-header">
-
-                <h2>
-                  HOLDINGS
-                </h2>
-
-              </div>
-
-              <div className="stock-list">
-
-                {stocks.map((stock) => (
-
+                return (
                   <div
-                    className="stock-card"
+                    className="stock-wrapper"
                     key={stock.id}
                   >
+                    <div
+                      className={`stock-card ${
+                        isDragging
+                          ? "dragging"
+                          : ""
+                      }`}
+                      style={{
+                        transform: isDragging
+                          ? `translateX(${dragX}px) rotate(${
+                              dragX / 30
+                            }deg)`
+                          : "translateX(0)",
+                      }}
+                      onPointerDown={(event) =>
+                        handlePointerDown(
+                          event,
+                          stock.id
+                        )
+                      }
+                      onPointerMove={
+                        handlePointerMove
+                      }
+                      onPointerUp={
+                        handlePointerUp
+                      }
+                      onPointerCancel={
+                        handlePointerUp
+                      }
+                    >
+                      <div className="stock-main">
+                        <div>
+                          <h3>{stock.name}</h3>
+                          <span className="sector">
+                            {stock.sector}
+                          </span>
+                        </div>
 
-                    <div className="stock-info">
-
-                      <div className="stock-icon">
-                        {stock.symbol}
+                        <div className="stock-price">
+                          ₹{price}
+                        </div>
                       </div>
 
-                      <div>
-                        <h3>
-                          {stock.name}
-                        </h3>
+                      <div className="stock-bottom">
+                        <div
+                          className={`movement ${direction}`}
+                        >
+                          {difference > 0
+                            ? `+₹${difference}`
+                            : difference < 0
+                            ? `-₹${Math.abs(
+                                difference
+                              )}`
+                            : "₹0"}
+                        </div>
 
-                        <p>
-                          {stock.shares}{' '}
-                          shares
-                        </p>
+                        <div className="owned">
+                          {holdings[stock.id]} shares
+                        </div>
                       </div>
 
+                      {isDragging && (
+                        <div
+                          className={
+                            dragX > 0
+                              ? "swipe-overlay buy-overlay"
+                              : dragX < 0
+                              ? "swipe-overlay sell-overlay"
+                              : "swipe-overlay"
+                          }
+                        >
+                          {dragX > 0
+                            ? "BUY"
+                            : dragX < 0
+                            ? "SELL"
+                            : "HOLD"}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="stock-price">
-
-                      <strong>
-                        {formatMoney(
-                          stock.price *
-                            stock.shares
-                        )}
-                      </strong>
-
-                      <span>
-                        {formatMoney(
-                          stock.price
-                        )}{' '}
-                        / share
-                      </span>
-
-                    </div>
-
+                    {locked && (
+                      <div className="reason">
+                        {currentRound.reasons[
+                          stock.id
+                        ]}
+                      </div>
+                    )}
                   </div>
-                ))}
-
-              </div>
-
-            </section>
-
-          </section>
-        )}
-
-        {/* =========================
-            LEADERBOARD TAB
-        ========================= */}
-
-        {activeTab === 'leaderboard' && (
-
-          <section className="leaderboard">
-
-            <div className="welcome">
-
-              <h2>
-                LEADERBOARD
-              </h2>
-
-              <p>
-                Players ranked by final portfolio value.
-              </p>
-
+                );
+              })}
             </div>
 
-            {leaderboardLoading ? (
+            <div className="lock-area">
+              {!locked ? (
+                <button
+                  className="lock-button"
+                  onClick={lockRound}
+                >
+                  LOCK DECISIONS
+                </button>
+              ) : (
+                <>
+                  <div className="locked-message">
+                    DECISIONS LOCKED
+                  </div>
 
-              <div className="card leaderboard-loading">
-                LOADING...
-              </div>
-
-            ) : leaderboard.length === 0 ? (
-
-              <div className="card">
-                No players yet.
-              </div>
-
-            ) : (
-
-              <div className="leaderboard-list">
-
-                {leaderboard.map(
-                  (player, index) => (
-
-                    <div
-                      className={
-                        player.id ===
-                        currentPlayer.id
-                          ? 'leaderboard-row your-score'
-                          : 'leaderboard-row'
-                      }
-                      key={player.id}
+                  {round <
+                    ROUNDS.length && (
+                    <button
+                      className="next-button"
+                      onClick={nextRound}
                     >
-
-                      <div className="rank">
-                        #{index + 1}
-                      </div>
-
-                      <div className="player-name">
-
-                        <strong>
-                          {player.username}
-                        </strong>
-
-                        {player.id ===
-                          currentPlayer.id && (
-                          <span>
-                            YOU
-                          </span>
-                        )}
-
-                      </div>
-
-                      <strong className="player-value">
-                        {formatMoney(
-                          player.score ||
-                            0
-                        )}
-                      </strong>
-
-                    </div>
-                  )
-                )}
-
-              </div>
-            )}
-
-          </section>
+                      NEXT ROUND
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </main>
         )}
 
-      </main>
+        {activeTab === "portfolio" && (
+          <main className="portfolio-page">
+            <div className="portfolio-summary">
+              <span>
+                CURRENT PORTFOLIO VALUE
+              </span>
 
+              <strong>
+                ₹
+                {portfolioValue.toLocaleString(
+                  "en-IN"
+                )}
+              </strong>
+
+              <div
+                className={
+                  profitLoss >= 0
+                    ? "profit"
+                    : "loss"
+                }
+              >
+                {profitLoss >= 0 ? "+" : ""}
+                ₹
+                {profitLoss.toLocaleString(
+                  "en-IN"
+                )}
+              </div>
+            </div>
+
+            <h2>Portfolio Performance</h2>
+
+            {renderGraph()}
+
+            <div className="holdings-list">
+              {STOCKS.map((stock) => (
+                <div
+                  className="holding-row"
+                  key={stock.id}
+                >
+                  <div>
+                    <strong>{stock.name}</strong>
+                    <span>
+                      {holdings[stock.id]} shares
+                    </span>
+                  </div>
+
+                  <div>
+                    <strong>
+                      ₹
+                      {(
+                        holdings[stock.id] *
+                        prices[stock.id]
+                      ).toLocaleString("en-IN")}
+                    </strong>
+
+                    <span>
+                      ₹{prices[stock.id]} / share
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </main>
+        )}
+
+        {activeTab === "leaderboard" && (
+          <main className="leaderboard-page">
+            <h2>Leaderboard</h2>
+
+            <div className="leaderboard-card">
+              <div className="leaderboard-header">
+                <span>Rank</span>
+                <span>Investor</span>
+                <span>Portfolio</span>
+              </div>
+
+              <div className="leaderboard-row">
+                <strong>1</strong>
+                <span>You</span>
+                <strong>
+                  ₹
+                  {portfolioValue.toLocaleString(
+                    "en-IN"
+                  )}
+                </strong>
+              </div>
+
+              <div className="leaderboard-row">
+                <strong>2</strong>
+                <span>Player 2</span>
+                <strong>₹10,000</strong>
+              </div>
+
+              <div className="leaderboard-row">
+                <strong>3</strong>
+                <span>Player 3</span>
+                <strong>₹10,000</strong>
+              </div>
+            </div>
+          </main>
+        )}
+      </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
