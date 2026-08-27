@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { supabase } from './supabaseClient'
 
@@ -9,7 +9,6 @@ const INITIAL_STOCKS = [
     id: 'sunvolt',
     name: 'SunVolt',
     symbol: 'SUN',
-    icon: '☀️',
     price: 100,
     shares: 0,
     avgPrice: 0,
@@ -18,7 +17,6 @@ const INITIAL_STOCKS = [
     id: 'fuelpower',
     name: 'FuelPower',
     symbol: 'FUEL',
-    icon: '🔥',
     price: 100,
     shares: 0,
     avgPrice: 0,
@@ -27,7 +25,6 @@ const INITIAL_STOCKS = [
     id: 'foodrush',
     name: 'FoodRush',
     symbol: 'FOOD',
-    icon: '🍔',
     price: 100,
     shares: 0,
     avgPrice: 0,
@@ -36,7 +33,6 @@ const INITIAL_STOCKS = [
     id: 'movemax',
     name: 'MoveMax',
     symbol: 'MOVE',
-    icon: '🚗',
     price: 100,
     shares: 0,
     avgPrice: 0,
@@ -45,7 +41,6 @@ const INITIAL_STOCKS = [
     id: 'medicore',
     name: 'MediCore',
     symbol: 'MEDI',
-    icon: '🏥',
     price: 100,
     shares: 0,
     avgPrice: 0,
@@ -55,11 +50,8 @@ const INITIAL_STOCKS = [
 const ROUND_DATA = [
   {
     id: 1,
-    type: 'breaking',
     title: 'BREAKING NEWS',
-    news: 'SUNVOLT WINS A MAJOR GOVERNMENT SOLAR CONTRACT.',
-    description:
-      'A major government solar contract is announced, changing expectations across the market.',
+    news: 'SUNVOLT WINS A MAJOR GOVERNMENT SOLAR CONTRACT',
     decisionTime: 30,
     prices: {
       sunvolt: 150,
@@ -68,27 +60,18 @@ const ROUND_DATA = [
       movemax: 120,
       medicore: 100,
     },
-    explanations: {
-      sunvolt:
-        'Profit — the successful government solar contract increases future demand and business.',
-      fuelpower:
-        'Loss — greater dependence on solar reduces demand for fuel.',
-      foodrush:
-        'Profit — lower fuel costs reduce operating costs for the food company.',
-      movemax:
-        'Profit — lower fuel costs make transportation cheaper, encouraging more vehicle use.',
-      medicore:
-        'No change — the solar contract does not directly affect healthcare.',
+    reasons: {
+      sunvolt: 'Major government contract increases future business and investor confidence.',
+      fuelpower: 'Greater dependence on solar reduces demand for traditional fuel.',
+      foodrush: 'Lower fuel costs reduce operating expenses and improve profits.',
+      movemax: 'Lower fuel costs encourage more travel and reduce transport costs.',
+      medicore: 'The announcement does not directly affect the healthcare sector.',
     },
   },
-
   {
     id: 2,
-    type: 'indirect',
     title: 'MARKET INFORMATION',
-    news: 'GLOBAL OIL PRICES RISE SHARPLY.',
-    description:
-      'Higher oil prices increase fuel and transportation costs across the economy.',
+    news: 'GLOBAL OIL PRICES RISE SHARPLY',
     decisionTime: 30,
     prices: {
       sunvolt: 180,
@@ -97,56 +80,38 @@ const ROUND_DATA = [
       movemax: 90,
       medicore: 100,
     },
-    explanations: {
-      sunvolt:
-        'Profit — expensive fuel encourages greater dependence on alternative energy such as solar.',
-      fuelpower:
-        'Profit — higher oil prices increase the value and revenue potential of fuel companies.',
-      foodrush:
-        'Loss — higher fuel costs increase transportation and operating expenses.',
-      movemax:
-        'Loss — higher fuel prices increase transportation costs and reduce vehicle usage.',
-      medicore:
-        'No change — rising oil prices have no major direct effect on healthcare.',
+    reasons: {
+      sunvolt: 'Higher fuel prices increase demand for alternative energy such as solar.',
+      fuelpower: 'Higher oil prices increase the value and revenue potential of fuel companies.',
+      foodrush: 'Higher fuel costs increase operating expenses and reduce profits.',
+      movemax: 'Higher fuel prices raise transportation costs and hurt the business.',
+      medicore: 'Oil prices have no significant direct effect on healthcare demand.',
     },
   },
-
   {
     id: 3,
-    type: 'policy',
-    title: 'GOVERNMENT POLICY',
-    news: 'GOVERNMENT BANS ENTRY OF DIESEL VEHICLES. EV VEHICLES WILL BE PAID TO OPERATE.',
-    description:
-      'The government shifts transportation away from diesel vehicles and supports electric vehicles.',
+    title: 'GOVERNMENT ANNOUNCEMENT',
+    news: 'GOVERNMENT ANNOUNCES PETROL PRICES CUT BY 50% TO HELP COMMON PEOPLE',
     decisionTime: 30,
     prices: {
-      sunvolt: 210,
-      fuelpower: 80,
-      foodrush: 100,
+      sunvolt: 150,
+      fuelpower: 25,
+      foodrush: 170,
       movemax: 130,
-      medicore: 100,
+      medicore: 200,
     },
-    explanations: {
-      sunvolt:
-        'Profit — increased EV usage raises demand for electricity and renewable solar power.',
-      fuelpower:
-        'Loss — diesel restrictions reduce demand for traditional fuel.',
-      foodrush:
-        'No change — food production is not directly affected by the diesel vehicle ban.',
-      movemax:
-        'Profit — government support for EV operation increases demand while diesel competitors are restricted.',
-      medicore:
-        'No change — the vehicle policy has no direct effect on healthcare.',
+    reasons: {
+      sunvolt: 'Cheaper petrol makes people less dependent on solar-powered alternatives.',
+      fuelpower: 'The 50% petrol price cut directly reduces fuel-sector prices.',
+      foodrush: 'Lower fuel costs reduce operating expenses and improve food-company profits.',
+      movemax: 'Cheaper petrol encourages more vehicle use and boosts transport demand.',
+      medicore: 'The petrol price change does not directly affect healthcare.',
     },
   },
-
   {
     id: 4,
-    type: 'crisis',
     title: 'MARKET ALERT',
-    news: 'NEW VIRUS OUTBREAK — GOVERNMENT ANNOUNCES FULL LOCKDOWN.',
-    description:
-      'People stay home during a nationwide lockdown, dramatically changing demand across industries.',
+    news: 'NEW VIRUS OUTBREAK — GOVERNMENT ANNOUNCES FULL LOCKDOWN',
     decisionTime: 30,
     prices: {
       sunvolt: 190,
@@ -155,17 +120,12 @@ const ROUND_DATA = [
       movemax: 70,
       medicore: 200,
     },
-    explanations: {
-      sunvolt:
-        'Loss — factories and offices close, reducing overall energy demand.',
-      fuelpower:
-        'Loss — people staying home means far less fuel is needed for transportation.',
-      foodrush:
-        'Profit — people staying home increases online food and essential-item orders.',
-      movemax:
-        'Loss — lockdown restrictions greatly reduce vehicle and transport usage.',
-      medicore:
-        'Profit — the virus increases healthcare demand and creates opportunities for treatment and vaccines.',
+    reasons: {
+      sunvolt: 'Factories and offices close, reducing energy demand despite continued solar relevance.',
+      fuelpower: 'People staying home means much less vehicle and fuel usage.',
+      foodrush: 'People staying home increases demand for food delivery and essential online orders.',
+      movemax: 'The lockdown sharply reduces vehicle and transport usage.',
+      medicore: 'The outbreak increases healthcare demand and creates opportunities for medical products.',
     },
   },
 ]
@@ -209,10 +169,26 @@ function App() {
   const [revealed, setRevealed] = useState(false)
   const [gameFinished, setGameFinished] = useState(false)
 
-  // Portfolio value after each round
+  // Portfolio value after every completed round.
   const [portfolioHistory, setPortfolioHistory] = useState([
-    STARTING_CAPITAL,
+    {
+      round: 0,
+      value: STARTING_CAPITAL,
+    },
   ])
+
+  // =========================
+  // TABS
+  // =========================
+
+  const [activeTab, setActiveTab] = useState('market')
+
+  // =========================
+  // SWIPE
+  // =========================
+
+  const touchStartX = useRef(null)
+  const touchStartY = useRef(null)
 
   // =========================
   // LOAD SAVED PLAYER
@@ -237,7 +213,7 @@ function App() {
   }, [])
 
   // =========================
-  // ACCOUNT ERROR
+  // ACCOUNT HELPERS
   // =========================
 
   const showSupabaseError = (error, fallbackMessage) => {
@@ -458,10 +434,13 @@ function App() {
     setDecisions({})
     setRevealed(false)
     setGameFinished(false)
-
     setPortfolioHistory([
-      STARTING_CAPITAL,
+      {
+        round: 0,
+        value: STARTING_CAPITAL,
+      },
     ])
+    setActiveTab('market')
   }
 
   // =========================
@@ -502,8 +481,7 @@ function App() {
     )
   }, [stocks])
 
-  const portfolioValue =
-    cash + stockValue
+  const portfolioValue = cash + stockValue
 
   const profitLoss =
     portfolioValue - STARTING_CAPITAL
@@ -534,11 +512,7 @@ function App() {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [
-    decisionOpen,
-    decisionLocked,
-    timer,
-  ])
+  }, [decisionOpen, decisionLocked, timer])
 
   // =========================
   // START DECISION
@@ -581,13 +555,10 @@ function App() {
   }
 
   // =========================
-  // BUY
+  // BUY SHARES
   // =========================
 
-  const buyShares = (
-    stockId,
-    quantity
-  ) => {
+  const buyShares = (stockId, quantity = 1) => {
     if (
       !decisionOpen ||
       decisionLocked ||
@@ -639,8 +610,7 @@ function App() {
         return {
           ...item,
           shares: newShares,
-          avgPrice:
-            newAveragePrice,
+          avgPrice: newAveragePrice,
         }
       })
     )
@@ -653,12 +623,12 @@ function App() {
   }
 
   // =========================
-  // SELL
+  // SELL SHARES
   // =========================
 
   const sellShares = (
     stockId,
-    quantity
+    quantity = 1
   ) => {
     if (
       !decisionOpen ||
@@ -735,7 +705,60 @@ function App() {
   }
 
   // =========================
-  // LOCK
+  // SWIPE HANDLERS
+  // =========================
+
+  const handleTouchStart = (event) => {
+    const touch = event.touches[0]
+
+    touchStartX.current = touch.clientX
+    touchStartY.current = touch.clientY
+  }
+
+  const handleTouchEnd = (event, stock) => {
+    if (
+      touchStartX.current === null ||
+      touchStartY.current === null
+    ) {
+      return
+    }
+
+    const touch = event.changedTouches[0]
+
+    const deltaX =
+      touch.clientX - touchStartX.current
+
+    const deltaY =
+      touch.clientY - touchStartY.current
+
+    touchStartX.current = null
+    touchStartY.current = null
+
+    // Ignore mostly vertical movement.
+    if (Math.abs(deltaX) < 70) return
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return
+
+    if (
+      !decisionOpen ||
+      decisionLocked ||
+      revealed
+    ) {
+      return
+    }
+
+    if (deltaX > 0) {
+      if (cash >= stock.price) {
+        buyShares(stock.id, 1)
+      }
+    } else {
+      if (stock.shares > 0) {
+        sellShares(stock.id, 1)
+      }
+    }
+  }
+
+  // =========================
+  // LOCK DECISIONS
   // =========================
 
   const lockDecision = () => {
@@ -745,7 +768,7 @@ function App() {
   }
 
   // =========================
-  // REVEAL
+  // REVEAL MARKET
   // =========================
 
   const revealPrices = () => {
@@ -757,45 +780,51 @@ function App() {
     setDecisionOpen(false)
     setTimer(0)
 
-    setStocks((previousStocks) =>
-      previousStocks.map((stock) => ({
-        ...stock,
-        price:
-          currentRound.prices[
-            stock.id
-          ] ?? stock.price,
-      }))
+    const newStocks = stocks.map((stock) => ({
+      ...stock,
+      price:
+        currentRound.prices[stock.id] ??
+        stock.price,
+    }))
+
+    setStocks(newStocks)
+
+    const newStockValue = newStocks.reduce(
+      (total, stock) =>
+        total + stock.price * stock.shares,
+      0
     )
 
-    setRevealed(true)
-  }
-
-  // =========================
-  // SAVE ROUND HISTORY
-  // =========================
-
-  useEffect(() => {
-    if (!revealed) return
+    const newPortfolioValue =
+      cash + newStockValue
 
     setPortfolioHistory((previous) => {
-      const updated = [
-        ...previous,
-        portfolioValue,
-      ]
+      const existing = previous.find(
+        (item) => item.round === round
+      )
 
-      if (
-        updated.length >
-        ROUND_DATA.length + 1
-      ) {
-        return updated.slice(
-          0,
-          ROUND_DATA.length + 1
+      if (existing) {
+        return previous.map((item) =>
+          item.round === round
+            ? {
+                round,
+                value: newPortfolioValue,
+              }
+            : item
         )
       }
 
-      return updated
+      return [
+        ...previous,
+        {
+          round,
+          value: newPortfolioValue,
+        },
+      ]
     })
-  }, [revealed])
+
+    setRevealed(true)
+  }
 
   // =========================
   // NEXT ROUND
@@ -816,6 +845,7 @@ function App() {
     setRevealed(false)
     setDecisions({})
     setTimer(0)
+    setActiveTab('market')
   }
 
   // =========================
@@ -849,24 +879,6 @@ function App() {
           'Could not save final score:',
           error
         )
-      } else {
-        const updatedPlayer = {
-          ...currentPlayer,
-          score: Math.round(
-            portfolioValue
-          ),
-        }
-
-        setCurrentPlayer(
-          updatedPlayer
-        )
-
-        localStorage.setItem(
-          'stockMarketPlayer',
-          JSON.stringify(
-            updatedPlayer
-          )
-        )
       }
     } catch (error) {
       console.error(
@@ -875,6 +887,121 @@ function App() {
       )
     }
   }
+
+  // =========================
+  // LEADERBOARD
+  // =========================
+
+  const [leaderboard, setLeaderboard] = useState([])
+  const [leaderboardLoading, setLeaderboardLoading] =
+    useState(false)
+
+  const loadLeaderboard = async () => {
+    setLeaderboardLoading(true)
+
+    try {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from('players')
+        .select('id, username, score')
+        .order('score', {
+          ascending: false,
+        })
+
+      if (error) {
+        console.error(
+          'Leaderboard error:',
+          error
+        )
+        return
+      }
+
+      setLeaderboard(data || [])
+    } catch (error) {
+      console.error(
+        'Leaderboard error:',
+        error
+      )
+    } finally {
+      setLeaderboardLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (
+      activeTab === 'leaderboard' &&
+      currentPlayer
+    ) {
+      loadLeaderboard()
+    }
+  }, [activeTab, currentPlayer])
+
+  // =========================
+  // GRAPH
+  // =========================
+
+  const graph = useMemo(() => {
+    const width = 900
+    const height = 300
+    const padding = 35
+
+    const values = portfolioHistory.map(
+      (item) => item.value
+    )
+
+    if (values.length === 0) {
+      return null
+    }
+
+    const minValue = Math.min(...values)
+    const maxValue = Math.max(...values)
+
+    const range =
+      maxValue - minValue || 1
+
+    const points = portfolioHistory.map(
+      (item, index) => {
+        const x =
+          padding +
+          (index /
+            Math.max(
+              portfolioHistory.length - 1,
+              1
+            )) *
+            (width - padding * 2)
+
+        const y =
+          height -
+          padding -
+          ((item.value - minValue) /
+            range) *
+            (height - padding * 2)
+
+        return {
+          x,
+          y,
+          round: item.round,
+          value: item.value,
+        }
+      }
+    )
+
+    const linePoints = points
+      .map(
+        (point) =>
+          `${point.x},${point.y}`
+      )
+      .join(' ')
+
+    return {
+      width,
+      height,
+      points,
+      linePoints,
+    }
+  }, [portfolioHistory])
 
   // =========================
   // LOGIN SCREEN
@@ -887,7 +1014,7 @@ function App() {
           <div className="auth-card">
 
             <div className="auth-logo">
-              📈
+              +
             </div>
 
             <h1>
@@ -995,7 +1122,9 @@ function App() {
 
               <button
                 className="auth-submit"
-                disabled={authLoading}
+                disabled={
+                  authLoading
+                }
                 onClick={
                   authMode === 'login'
                     ? login
@@ -1032,7 +1161,7 @@ function App() {
         <div className="game-start">
 
           <div className="game-logo">
-            📈
+            +
           </div>
 
           <h1>
@@ -1061,9 +1190,8 @@ function App() {
           <div className="game-rules-preview">
 
             <div>
-              📰
               <strong>
-                Market News
+                MARKET NEWS
               </strong>
               <span>
                 React to information
@@ -1071,9 +1199,8 @@ function App() {
             </div>
 
             <div>
-              ⏱️
               <strong>
-                Timed Decisions
+                TIMED DECISIONS
               </strong>
               <span>
                 30 seconds
@@ -1081,9 +1208,8 @@ function App() {
             </div>
 
             <div>
-              📊
               <strong>
-                Hidden Prices
+                HIDDEN PRICES
               </strong>
               <span>
                 Think before trading
@@ -1091,9 +1217,8 @@ function App() {
             </div>
 
             <div>
-              🏆
               <strong>
-                Final Ranking
+                FINAL RANKING
               </strong>
               <span>
                 Highest portfolio wins
@@ -1106,7 +1231,7 @@ function App() {
             className="start-game-button"
             onClick={startGame}
           >
-            START GAME →
+            START GAME
           </button>
 
           <button
@@ -1128,21 +1253,45 @@ function App() {
   if (gameFinished) {
     return (
       <div className="app">
-        <div className="final-screen">
 
-          <div className="final-trophy">
-            🏆
+        <header className="game-header">
+
+          <div>
+            <span className="game-label">
+              STOCK MARKET LIVE
+            </span>
+
+            <h1>
+              MARKET CLOSED
+            </h1>
+
+            <p>
+              Investor:{' '}
+              <strong>
+                {currentPlayer.username}
+              </strong>
+            </p>
           </div>
 
-          <h1>
-            MARKET CLOSED
-          </h1>
+          <div className="header-stats">
+            <div>
+              <span>
+                FINAL VALUE
+              </span>
 
-          <p>
-            Final portfolio
-          </p>
+              <strong>
+                {formatMoney(
+                  portfolioValue
+                )}
+              </strong>
+            </div>
+          </div>
 
-          <div className="final-card">
+        </header>
+
+        <main className="game-main final-main">
+
+          <section className="final-card">
 
             <span>
               FINAL PORTFOLIO VALUE
@@ -1174,19 +1323,86 @@ function App() {
                 : 'LOSS'}
             </div>
 
-          </div>
+          </section>
 
-          <div className="final-graph-card">
+          <section className="portfolio-chart final-chart">
 
             <h2>
               PORTFOLIO PERFORMANCE
             </h2>
 
-            <PortfolioGraph
-              values={portfolioHistory}
-            />
+            <p>
+              Portfolio value after each completed round.
+            </p>
 
-          </div>
+            <div className="chart-container">
+
+              {graph && (
+                <svg
+                  className="portfolio-svg"
+                  viewBox={`0 0 ${graph.width} ${graph.height}`}
+                  preserveAspectRatio="none"
+                >
+                  <polyline
+                    points={graph.linePoints}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  {graph.points.map(
+                    (point) => (
+                      <g
+                        key={point.round}
+                      >
+                        <circle
+                          cx={point.x}
+                          cy={point.y}
+                          r="7"
+                          fill="currentColor"
+                        />
+
+                        <text
+                          x={point.x}
+                          y={
+                            point.y -
+                            14
+                          }
+                          textAnchor="middle"
+                          className="graph-label"
+                        >
+                          R{point.round}
+                        </text>
+                      </g>
+                    )
+                  )}
+                </svg>
+              )}
+
+            </div>
+
+            <div className="chart-values">
+
+              {portfolioHistory.map(
+                (item) => (
+                  <span
+                    key={item.round}
+                  >
+                    Round {item.round}:{' '}
+                    <strong>
+                      {formatMoney(
+                        item.value
+                      )}
+                    </strong>
+                  </span>
+                )
+              )}
+
+            </div>
+
+          </section>
 
           <button
             className="start-game-button"
@@ -1202,125 +1418,6 @@ function App() {
             Logout
           </button>
 
-        </div>
-      </div>
-    )
-  }
-
-  // =========================
-  // MARKET OPEN
-  // =========================
-
-  if (round === 0) {
-    return (
-      <div className="app">
-
-        <header className="game-header">
-
-          <div>
-            <span className="game-label">
-              STOCK MARKET LIVE
-            </span>
-
-            <h1>
-              MARKET OPEN
-            </h1>
-
-            <p>
-              Investor:{' '}
-              <strong>
-                {currentPlayer.username}
-              </strong>
-            </p>
-          </div>
-
-          <div className="header-stats">
-
-            <div>
-              <span>
-                CASH
-              </span>
-
-              <strong>
-                {formatMoney(cash)}
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                VALUE
-              </span>
-
-              <strong>
-                {formatMoney(
-                  portfolioValue
-                )}
-              </strong>
-            </div>
-
-          </div>
-
-        </header>
-
-        <main className="game-main">
-
-          <section className="market-open-card">
-
-            <div className="round-number">
-              ROUND 1
-            </div>
-
-            <h2>
-              MARKET OPEN
-            </h2>
-
-            <p>
-              Study the companies.
-              The first news event is coming.
-            </p>
-
-            <div className="stock-grid">
-
-              {stocks.map((stock) => (
-                <div
-                  className="stock-card"
-                  key={stock.id}
-                >
-
-                  <span className="stock-icon">
-                    {stock.icon}
-                  </span>
-
-                  <h3>
-                    {stock.name}
-                  </h3>
-
-                  <span>
-                    {stock.symbol}
-                  </span>
-
-                  <strong>
-                    {formatMoney(
-                      stock.price
-                    )}
-                  </strong>
-
-                </div>
-              ))}
-
-            </div>
-
-            <button
-              className="primary-button"
-              onClick={() =>
-                setRound(1)
-              }
-            >
-              CONTINUE →
-            </button>
-
-          </section>
-
         </main>
 
       </div>
@@ -1328,7 +1425,7 @@ function App() {
   }
 
   // =========================
-  // GAME ROUND
+  // MAIN GAME
   // =========================
 
   return (
@@ -1339,11 +1436,13 @@ function App() {
         <div>
 
           <span className="game-label">
-            ROUND {round} / {ROUND_DATA.length}
+            STOCK MARKET LIVE
           </span>
 
           <h1>
-            {currentRound.title}
+            {round === 0
+              ? 'MARKET OPEN'
+              : `ROUND ${round} / ${ROUND_DATA.length}`}
           </h1>
 
           <p>
@@ -1383,811 +1482,1003 @@ function App() {
 
       </header>
 
+      {/* TABS */}
+
+      <nav className="tabs">
+
+        <button
+          className={
+            activeTab === 'market'
+              ? 'tab active'
+              : 'tab'
+          }
+          onClick={() =>
+            setActiveTab('market')
+          }
+        >
+          MARKET
+        </button>
+
+        <button
+          className={
+            activeTab === 'portfolio'
+              ? 'tab active'
+              : 'tab'
+          }
+          onClick={() =>
+            setActiveTab('portfolio')
+          }
+        >
+          PORTFOLIO
+        </button>
+
+        <button
+          className={
+            activeTab === 'leaderboard'
+              ? 'tab active'
+              : 'tab'
+          }
+          onClick={() =>
+            setActiveTab('leaderboard')
+          }
+        >
+          LEADERBOARD
+        </button>
+
+      </nav>
+
       <main className="game-main">
 
-        {/* NEWS */}
+        {/* =========================
+            MARKET TAB
+        ========================= */}
 
-        <section
-          className={`news-card ${currentRound.type}`}
-        >
+        {activeTab === 'market' && (
 
-          <div className="news-badge">
+          <>
+            {/* MARKET OPEN */}
 
-            {currentRound.type ===
-            'crisis'
-              ? 'MARKET ALERT'
-              : currentRound.type ===
-                'policy'
-              ? 'GOVERNMENT POLICY'
-              : currentRound.type ===
-                'indirect'
-              ? 'MARKET INFORMATION'
-              : 'BREAKING NEWS'}
+            {round === 0 && (
+              <section className="market-open-card">
 
-          </div>
-
-          <h2>
-            {currentRound.news}
-          </h2>
-
-          <p>
-            {currentRound.description}
-          </p>
-
-        </section>
-
-        {/* START DECISION */}
-
-        {!decisionOpen &&
-          !decisionLocked &&
-          !revealed && (
-            <section className="decision-start">
-
-              <div className="round-number">
-                ROUND {round}
-              </div>
-
-              <h2>
-                Ready to trade?
-              </h2>
-
-              <p>
-                Read the news. Think fast.
-                Prices stay hidden.
-              </p>
-
-              <button
-                className="primary-button"
-                onClick={
-                  startDecision
-                }
-              >
-                START{' '}
-                {
-                  currentRound.decisionTime
-                }s TIMER
-              </button>
-
-            </section>
-          )}
-
-        {/* DECISION MODE */}
-
-        {decisionOpen && (
-          <section className="decision-section">
-
-            <div className="trading-status">
-
-              <div className="timer-box">
-                <span>
-                  TIME
-                </span>
-
-                <strong>
-                  {timer}s
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  CASH
-                </span>
-
-                <strong>
-                  {formatMoney(cash)}
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  PORTFOLIO
-                </span>
-
-                <strong>
-                  {formatMoney(
-                    portfolioValue
-                  )}
-                </strong>
-              </div>
-
-            </div>
-
-            <div className="decision-heading">
-
-              <div>
-                <span className="round-number">
-                  YOUR MOVE
-                </span>
+                <div className="round-number">
+                  ROUND 1
+                </div>
 
                 <h2>
-                  BUY • HOLD • SELL
+                  MARKET OPEN
                 </h2>
-              </div>
 
-              <div className="timer-large">
-                {timer}
-              </div>
+                <p>
+                  Study the companies before
+                  the first market event.
+                </p>
 
-            </div>
+                <div className="stock-grid">
 
-            <div className="decision-grid">
-
-              {stocks.map((stock) => {
-
-                const selected =
-                  decisions[
-                    stock.id
-                  ]
-
-                const selectedAction =
-                  selected?.action
-
-                const selectedQuantity =
-                  selected?.quantity || 0
-
-                const maxBuy =
-                  Math.floor(
-                    cash /
-                      stock.price
-                  )
-
-                return (
-                  <div
-                    className={
-                      selectedAction
-                        ? 'decision-card chosen'
-                        : 'decision-card'
-                    }
-                    key={stock.id}
-                  >
-
-                    <div className="decision-company">
-
-                      <span className="decision-icon">
-                        {stock.icon}
-                      </span>
-
-                      <div className="company-info">
-
-                        <strong>
-                          {stock.name}
-                        </strong>
-
-                        <span className="company-price">
-                          {formatMoney(
-                            stock.price
-                          )}{' '}
-                          / share
-                        </span>
-
-                        <span className="owned-count">
-                          Owned:{' '}
-                          <b>
-                            {stock.shares}
-                          </b>
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                    <div className="quantity-area">
-
-                      <span>
-                        BUY / SELL QUANTITY
-                      </span>
-
-                      <div className="quantity-controls">
-
-                        <button
-                          type="button"
-                          disabled={
-                            selectedQuantity <=
-                            0
-                          }
-                          onClick={() => {
-
-                            const newQuantity =
-                              Math.max(
-                                0,
-                                selectedQuantity -
-                                  1
-                              )
-
-                            updateDecision(
-                              stock.id,
-                              selectedAction ||
-                                'BUY',
-                              newQuantity
-                            )
-                          }}
-                        >
-                          −
-                        </button>
-
-                        <strong>
-                          {selectedQuantity}
-                        </strong>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-
-                            const max =
-                              selectedAction ===
-                              'SELL'
-                                ? stock.shares
-                                : maxBuy
-
-                            if (
-                              selectedQuantity <
-                              max
-                            ) {
-                              updateDecision(
-                                stock.id,
-                                selectedAction ||
-                                  'BUY',
-                                selectedQuantity +
-                                  1
-                              )
-                            }
-                          }}
-                        >
-                          +
-                        </button>
-
-                      </div>
-
-                    </div>
-
-                    <div className="decision-buttons">
-
-                      <button
-                        type="button"
-                        className={
-                          selectedAction ===
-                          'BUY'
-                            ? 'decision-button buy selected'
-                            : 'decision-button buy'
-                        }
-                        disabled={
-                          maxBuy <= 0
-                        }
-                        onClick={() => {
-
-                          const quantity =
-                            selectedAction ===
-                              'BUY' &&
-                            selectedQuantity >
-                              0
-                              ? selectedQuantity
-                              : 1
-
-                          if (
-                            quantity <=
-                            maxBuy
-                          ) {
-                            buyShares(
-                              stock.id,
-                              quantity
-                            )
-                          }
-                        }}
-                      >
-                        {selectedAction ===
-                          'BUY' &&
-                        selectedQuantity >
-                          0
-                          ? `BUY × ${selectedQuantity}`
-                          : 'BUY'}
-                      </button>
-
-                      <button
-                        type="button"
-                        className={
-                          selectedAction ===
-                          'HOLD'
-                            ? 'decision-button hold selected'
-                            : 'decision-button hold'
-                        }
-                        onClick={() =>
-                          holdStock(
-                            stock.id
-                          )
-                        }
-                      >
-                        {selectedAction ===
-                        'HOLD'
-                          ? 'HOLDING'
-                          : 'HOLD'}
-                      </button>
-
-                      <button
-                        type="button"
-                        className={
-                          selectedAction ===
-                          'SELL'
-                            ? 'decision-button sell selected'
-                            : 'decision-button sell'
-                        }
-                        disabled={
-                          stock.shares <=
-                          0
-                        }
-                        onClick={() => {
-
-                          const quantity =
-                            selectedAction ===
-                              'SELL' &&
-                            selectedQuantity >
-                              0
-                              ? Math.min(
-                                  selectedQuantity,
-                                  stock.shares
-                                )
-                              : 1
-
-                          if (
-                            quantity <=
-                            stock.shares
-                          ) {
-                            sellShares(
-                              stock.id,
-                              quantity
-                            )
-                          }
-                        }}
-                      >
-                        {selectedAction ===
-                          'SELL' &&
-                        selectedQuantity >
-                          0
-                          ? `SELL × ${selectedQuantity}`
-                          : 'SELL'}
-                      </button>
-
-                    </div>
-
-                    {selectedAction && (
-                      <div className="selected-decision">
-
-                        {selectedAction ===
-                          'BUY' &&
-                        selectedQuantity >
-                          0 ? (
-                          <>
-                            Buying{' '}
-                            <strong>
-                              {
-                                selectedQuantity
-                              }
-                            </strong>{' '}
-                            shares
-                          </>
-                        ) : selectedAction ===
-                            'SELL' &&
-                          selectedQuantity >
-                            0 ? (
-                          <>
-                            Selling{' '}
-                            <strong>
-                              {
-                                selectedQuantity
-                              }
-                            </strong>{' '}
-                            shares
-                          </>
-                        ) : (
-                          <>
-                            <strong>
-                              HOLD
-                            </strong>{' '}
-                            position
-                          </>
-                        )}
-
-                      </div>
-                    )}
-
-                  </div>
-                )
-              })}
-
-            </div>
-
-            <button
-              className="lock-button"
-              onClick={
-                lockDecision
-              }
-            >
-              LOCK DECISIONS
-            </button>
-
-          </section>
-        )}
-
-        {/* LOCKED */}
-
-        {decisionLocked &&
-          !revealed && (
-            <section className="locked-card">
-
-              <div>
-                LOCKED
-              </div>
-
-              <h2>
-                DECISION LOCKED
-              </h2>
-
-              <p>
-                Your choices are final.
-              </p>
-
-              <button
-                className="primary-button"
-                onClick={
-                  revealPrices
-                }
-              >
-                REVEAL MARKET →
-              </button>
-
-            </section>
-          )}
-
-        {/* REVEAL */}
-
-        {revealed && (
-          <section className="reveal-section">
-
-            <div className="reveal-title">
-              MARKET MOVES
-            </div>
-
-            <div className="price-table">
-
-              <div className="price-row header-row">
-                <span>
-                  STOCK
-                </span>
-
-                <span>
-                  BEFORE
-                </span>
-
-                <span>
-                  AFTER
-                </span>
-              </div>
-
-              {stocks.map((stock) => {
-
-                const before =
-                  currentRound.id === 1
-                    ? 100
-                    : ROUND_DATA[
-                        currentRound.id - 2
-                      ].prices[
-                        stock.id
-                      ] ?? stock.price
-
-                const change =
-                  stock.price -
-                  before
-
-                return (
-                  <div
-                    className="price-row"
-                    key={stock.id}
-                  >
-
-                    <span>
-                      {stock.icon}{' '}
-                      {stock.name}
-                    </span>
-
-                    <span>
-                      {formatMoney(
-                        before
-                      )}
-                    </span>
-
-                    <span
-                      className={
-                        change > 0
-                          ? 'price-up'
-                          : change < 0
-                          ? 'price-down'
-                          : 'price-neutral'
-                      }
-                    >
-                      {change > 0
-                        ? '▲ '
-                        : change < 0
-                        ? '▼ '
-                        : '= '}
-
-                      {formatMoney(
-                        stock.price
-                      )}
-                    </span>
-
-                  </div>
-                )
-              })}
-
-            </div>
-
-            {/* ROUND EXPLANATIONS */}
-
-            <div className="round-explanations">
-
-              <h2>
-                ROUND OUTCOME
-              </h2>
-
-              <div className="explanation-list">
-
-                {stocks.map((stock) => {
-
-                  const explanation =
-                    currentRound
-                      .explanations?.[
-                      stock.id
-                    ]
-
-                  if (!explanation) {
-                    return null
-                  }
-
-                  return (
+                  {stocks.map((stock) => (
                     <div
-                      className="explanation-row"
+                      className="stock-card"
                       key={stock.id}
                     >
 
-                      <strong>
-                        {stock.name}
-                      </strong>
+                      <div className="stock-info">
+                        <div className="stock-icon">
+                          {stock.symbol}
+                        </div>
+
+                        <div>
+                          <h3>
+                            {stock.name}
+                          </h3>
+
+                          <p>
+                            {stock.symbol}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="stock-price">
+                        <strong>
+                          {formatMoney(
+                            stock.price
+                          )}
+                        </strong>
+                      </div>
+
+                    </div>
+                  ))}
+
+                </div>
+
+                <button
+                  className="primary-button"
+                  onClick={() =>
+                    setRound(1)
+                  }
+                >
+                  CONTINUE
+                </button>
+
+              </section>
+            )}
+
+            {/* CURRENT ROUND */}
+
+            {round > 0 && currentRound && (
+
+              <>
+
+                <section className="news-card">
+
+                  <div className="news-badge">
+                    {currentRound.title}
+                  </div>
+
+                  <h2>
+                    {currentRound.news}
+                  </h2>
+
+                </section>
+
+                {!decisionOpen &&
+                  !decisionLocked &&
+                  !revealed && (
+                    <section className="decision-start">
+
+                      <div className="round-number">
+                        ROUND {round}
+                      </div>
+
+                      <h2>
+                        Ready to trade?
+                      </h2>
+
+                      <p>
+                        Swipe right to buy.
+                        Swipe left to sell.
+                        Hold if you want to keep your position.
+                      </p>
+
+                      <button
+                        className="primary-button"
+                        onClick={
+                          startDecision
+                        }
+                      >
+                        START 30s TIMER
+                      </button>
+
+                    </section>
+                  )}
+
+                {decisionOpen && (
+
+                  <section className="decision-section">
+
+                    <div className="trading-status">
+
+                      <div className="timer-box">
+                        <span>
+                          TIME
+                        </span>
+
+                        <strong>
+                          {timer}s
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          CASH
+                        </span>
+
+                        <strong>
+                          {formatMoney(
+                            cash
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          PORTFOLIO
+                        </span>
+
+                        <strong>
+                          {formatMoney(
+                            portfolioValue
+                          )}
+                        </strong>
+                      </div>
+
+                    </div>
+
+                    <div className="decision-heading">
+
+                      <div>
+                        <span className="round-number">
+                          YOUR MOVE
+                        </span>
+
+                        <h2>
+                          TRADE
+                        </h2>
+                      </div>
+
+                      <div className="timer-large">
+                        {timer}
+                      </div>
+
+                    </div>
+
+                    <div className="swipe-help">
+
+                      <span className="swipe-sell">
+                        SWIPE LEFT TO SELL
+                      </span>
 
                       <span>
-                        {explanation}
+                        HOLD
+                      </span>
+
+                      <span className="swipe-buy">
+                        SWIPE RIGHT TO BUY
                       </span>
 
                     </div>
-                  )
-                })}
 
-              </div>
+                    <div className="decision-grid">
 
-            </div>
+                      {stocks.map((stock) => {
 
-            {/* PORTFOLIO */}
+                        const selected =
+                          decisions[
+                            stock.id
+                          ]
 
-            <div className="portfolio-summary">
+                        const selectedAction =
+                          selected?.action
 
-              <h2>
-                YOUR PORTFOLIO
-              </h2>
+                        const selectedQuantity =
+                          selected?.quantity ||
+                          0
 
-              <div className="summary-grid">
+                        const maxBuy =
+                          Math.floor(
+                            cash /
+                              stock.price
+                          )
 
-                <div>
-                  <span>
-                    Cash
-                  </span>
+                        return (
 
-                  <strong>
-                    {formatMoney(
-                      cash
-                    )}
-                  </strong>
-                </div>
+                          <div
+                            className={
+                              selectedAction
+                                ? 'decision-card chosen'
+                                : 'decision-card'
+                            }
+                            key={stock.id}
+                            onTouchStart={
+                              handleTouchStart
+                            }
+                            onTouchEnd={(
+                              event
+                            ) =>
+                              handleTouchEnd(
+                                event,
+                                stock
+                              )
+                            }
+                          >
 
-                <div>
-                  <span>
-                    Shares
-                  </span>
+                            <div className="swipe-track">
+                              <span>
+                                SELL
+                              </span>
 
-                  <strong>
-                    {formatMoney(
-                      stockValue
-                    )}
-                  </strong>
-                </div>
+                              <span>
+                                SWIPE
+                              </span>
 
-                <div>
-                  <span>
-                    Total
-                  </span>
+                              <span>
+                                BUY
+                              </span>
+                            </div>
 
-                  <strong>
-                    {formatMoney(
-                      portfolioValue
-                    )}
-                  </strong>
-                </div>
+                            <div className="decision-company">
 
+                              <div className="decision-icon">
+                                {stock.symbol}
+                              </div>
+
+                              <div className="company-info">
+
+                                <strong>
+                                  {stock.name}
+                                </strong>
+
+                                <span className="company-price">
+                                  {formatMoney(
+                                    stock.price
+                                  )}{' '}
+                                  / share
+                                </span>
+
+                                <span className="owned-count">
+                                  Owned:{' '}
+                                  <b>
+                                    {
+                                      stock.shares
+                                    }
+                                  </b>
+                                </span>
+
+                              </div>
+
+                            </div>
+
+                            <div className="quantity-area">
+
+                              <span>
+                                QUANTITY
+                              </span>
+
+                              <div className="quantity-controls">
+
+                                <button
+                                  type="button"
+                                  disabled={
+                                    selectedQuantity <=
+                                    0
+                                  }
+                                  onClick={() => {
+
+                                    const newQuantity =
+                                      Math.max(
+                                        0,
+                                        selectedQuantity -
+                                          1
+                                      )
+
+                                    updateDecision(
+                                      stock.id,
+                                      selectedAction ||
+                                        'BUY',
+                                      newQuantity
+                                    )
+                                  }}
+                                >
+                                  -
+                                </button>
+
+                                <strong>
+                                  {
+                                    selectedQuantity
+                                  }
+                                </strong>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+
+                                    const max =
+                                      selectedAction ===
+                                      'SELL'
+                                        ? stock.shares
+                                        : maxBuy
+
+                                    if (
+                                      selectedQuantity <
+                                      max
+                                    ) {
+                                      updateDecision(
+                                        stock.id,
+                                        selectedAction ||
+                                          'BUY',
+                                        selectedQuantity +
+                                          1
+                                      )
+                                    }
+                                  }}
+                                >
+                                  +
+                                </button>
+
+                              </div>
+
+                            </div>
+
+                            <div className="decision-buttons">
+
+                              <button
+                                type="button"
+                                className={
+                                  selectedAction ===
+                                  'BUY'
+                                    ? 'decision-button buy selected'
+                                    : 'decision-button buy'
+                                }
+                                disabled={
+                                  maxBuy <=
+                                  0
+                                }
+                                onClick={() =>
+                                  buyShares(
+                                    stock.id,
+                                    1
+                                  )
+                                }
+                              >
+                                BUY
+                              </button>
+
+                              <button
+                                type="button"
+                                className={
+                                  selectedAction ===
+                                  'HOLD'
+                                    ? 'decision-button hold selected'
+                                    : 'decision-button hold'
+                                }
+                                onClick={() =>
+                                  holdStock(
+                                    stock.id
+                                  )
+                                }
+                              >
+                                HOLD
+                              </button>
+
+                              <button
+                                type="button"
+                                className={
+                                  selectedAction ===
+                                  'SELL'
+                                    ? 'decision-button sell selected'
+                                    : 'decision-button sell'
+                                }
+                                disabled={
+                                  stock.shares <=
+                                  0
+                                }
+                                onClick={() =>
+                                  sellShares(
+                                    stock.id,
+                                    1
+                                  )
+                                }
+                              >
+                                SELL
+                              </button>
+
+                            </div>
+
+                            {selectedAction && (
+                              <div className="selected-decision">
+
+                                {selectedAction ===
+                                  'BUY' &&
+                                selectedQuantity >
+                                  0
+                                  ? `Buying ${selectedQuantity} share${selectedQuantity === 1 ? '' : 's'}`
+                                  : selectedAction ===
+                                      'SELL' &&
+                                    selectedQuantity >
+                                      0
+                                  ? `Selling ${selectedQuantity} share${selectedQuantity === 1 ? '' : 's'}`
+                                  : 'Holding position'}
+
+                              </div>
+                            )}
+
+                          </div>
+                        )
+                      })}
+
+                    </div>
+
+                    <button
+                      className="lock-button"
+                      onClick={
+                        lockDecision
+                      }
+                    >
+                      LOCK DECISIONS
+                    </button>
+
+                  </section>
+                )}
+
+                {decisionLocked &&
+                  !revealed && (
+                    <section className="locked-card">
+
+                      <div className="locked-icon">
+                        LOCKED
+                      </div>
+
+                      <h2>
+                        DECISIONS LOCKED
+                      </h2>
+
+                      <p>
+                        Your choices are final.
+                      </p>
+
+                      <button
+                        className="primary-button"
+                        onClick={
+                          revealPrices
+                        }
+                      >
+                        REVEAL MARKET
+                      </button>
+
+                    </section>
+                  )}
+
+                {revealed && (
+
+                  <section className="reveal-section">
+
+                    <div className="reveal-title">
+                      MARKET MOVES
+                    </div>
+
+                    <div className="price-table">
+
+                      <div className="price-row header-row">
+                        <span>
+                          STOCK
+                        </span>
+
+                        <span>
+                          BEFORE
+                        </span>
+
+                        <span>
+                          AFTER
+                        </span>
+                      </div>
+
+                      {stocks.map((stock) => {
+
+                        const before =
+                          currentRound.id === 1
+                            ? 100
+                            : ROUND_DATA[
+                                currentRound.id -
+                                  2
+                              ].prices[
+                                stock.id
+                              ]
+
+                        const change =
+                          stock.price -
+                          before
+
+                        return (
+
+                          <div
+                            className="price-row"
+                            key={stock.id}
+                          >
+
+                            <span>
+                              {stock.name}
+                            </span>
+
+                            <span>
+                              {formatMoney(
+                                before
+                              )}
+                            </span>
+
+                            <span
+                              className={
+                                change >= 0
+                                  ? 'price-up'
+                                  : 'price-down'
+                              }
+                            >
+                              {change >= 0
+                                ? '▲ '
+                                : '▼ '}
+
+                              {formatMoney(
+                                stock.price
+                              )}
+                            </span>
+
+                          </div>
+                        )
+                      })}
+
+                    </div>
+
+                    <div className="round-reasons">
+
+                      <h2>
+                        WHY THE MARKET MOVED
+                      </h2>
+
+                      {stocks.map(
+                        (stock) => (
+                          <div
+                            className="reason-row"
+                            key={stock.id}
+                          >
+                            <strong>
+                              {stock.name}
+                            </strong>
+
+                            <span>
+                              {
+                                currentRound
+                                  .reasons[
+                                  stock.id
+                                ]
+                              }
+                            </span>
+                          </div>
+                        )
+                      )}
+
+                    </div>
+
+                    <div className="portfolio-summary">
+
+                      <h2>
+                        YOUR PORTFOLIO
+                      </h2>
+
+                      <div className="summary-grid">
+
+                        <div>
+                          <span>
+                            Cash
+                          </span>
+
+                          <strong>
+                            {formatMoney(
+                              cash
+                            )}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>
+                            Shares
+                          </span>
+
+                          <strong>
+                            {formatMoney(
+                              stockValue
+                            )}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>
+                            Total
+                          </span>
+
+                          <strong>
+                            {formatMoney(
+                              portfolioValue
+                            )}
+                          </strong>
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                    <button
+                      className="primary-button"
+                      onClick={() => {
+
+                        if (
+                          round >=
+                          ROUND_DATA.length
+                        ) {
+                          finishGame()
+                        } else {
+                          nextRound()
+                        }
+
+                      }}
+                    >
+                      {round >=
+                      ROUND_DATA.length
+                        ? 'MARKET CLOSED'
+                        : 'NEXT ROUND'}
+                    </button>
+
+                  </section>
+                )}
+
+              </>
+            )}
+
+          </>
+        )}
+
+        {/* =========================
+            PORTFOLIO TAB
+        ========================= */}
+
+        {activeTab === 'portfolio' && (
+
+          <section className="portfolio-page">
+
+            <div className="portfolio-header">
+
+              <div>
+                <span className="game-label">
+                  YOUR PORTFOLIO
+                </span>
+
+                <h2>
+                  {formatMoney(
+                    portfolioValue
+                  )}
+                </h2>
               </div>
 
               <div
                 className={
                   profitLoss >= 0
-                    ? 'round-profit positive'
-                    : 'round-profit negative'
+                    ? 'portfolio-profit positive'
+                    : 'portfolio-profit negative'
                 }
               >
                 {profitLoss >= 0
-                  ? '▲'
-                  : '▼'}{' '}
-
+                  ? '+'
+                  : '-'}
                 {formatMoney(
                   Math.abs(
                     profitLoss
                   )
-                )}{' '}
-
-                overall
+                )}
               </div>
 
             </div>
 
-            <button
-              className="primary-button"
-              onClick={() => {
+            <section className="portfolio-chart">
 
-                if (
-                  round >=
-                  ROUND_DATA.length
-                ) {
-                  finishGame()
-                } else {
-                  nextRound()
-                }
+              <h2>
+                PERFORMANCE
+              </h2>
 
-              }}
-            >
-              {round >=
-              ROUND_DATA.length
-                ? 'MARKET CLOSED →'
-                : 'NEXT ROUND →'}
-            </button>
+              <p>
+                Portfolio value after each round.
+              </p>
+
+              <div className="chart-container">
+
+                {graph && (
+                  <svg
+                    className="portfolio-svg"
+                    viewBox={`0 0 ${graph.width} ${graph.height}`}
+                    preserveAspectRatio="none"
+                  >
+                    <polyline
+                      points={
+                        graph.linePoints
+                      }
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+
+                    {graph.points.map(
+                      (point) => (
+                        <g
+                          key={point.round}
+                        >
+                          <circle
+                            cx={point.x}
+                            cy={point.y}
+                            r="7"
+                            fill="currentColor"
+                          />
+
+                          <text
+                            x={point.x}
+                            y={
+                              point.y -
+                              14
+                            }
+                            textAnchor="middle"
+                            className="graph-label"
+                          >
+                            R{point.round}
+                          </text>
+                        </g>
+                      )
+                    )}
+                  </svg>
+                )}
+
+              </div>
+
+              <div className="chart-values">
+
+                {portfolioHistory.map(
+                  (item) => (
+                    <span
+                      key={item.round}
+                    >
+                      Round {item.round}:{' '}
+                      <strong>
+                        {formatMoney(
+                          item.value
+                        )}
+                      </strong>
+                    </span>
+                  )
+                )}
+
+              </div>
+
+            </section>
+
+            <section className="market">
+
+              <div className="market-header">
+
+                <h2>
+                  HOLDINGS
+                </h2>
+
+              </div>
+
+              <div className="stock-list">
+
+                {stocks.map((stock) => (
+
+                  <div
+                    className="stock-card"
+                    key={stock.id}
+                  >
+
+                    <div className="stock-info">
+
+                      <div className="stock-icon">
+                        {stock.symbol}
+                      </div>
+
+                      <div>
+                        <h3>
+                          {stock.name}
+                        </h3>
+
+                        <p>
+                          {stock.shares}{' '}
+                          shares
+                        </p>
+                      </div>
+
+                    </div>
+
+                    <div className="stock-price">
+
+                      <strong>
+                        {formatMoney(
+                          stock.price *
+                            stock.shares
+                        )}
+                      </strong>
+
+                      <span>
+                        {formatMoney(
+                          stock.price
+                        )}{' '}
+                        / share
+                      </span>
+
+                    </div>
+
+                  </div>
+                ))}
+
+              </div>
+
+            </section>
+
+          </section>
+        )}
+
+        {/* =========================
+            LEADERBOARD TAB
+        ========================= */}
+
+        {activeTab === 'leaderboard' && (
+
+          <section className="leaderboard">
+
+            <div className="welcome">
+
+              <h2>
+                LEADERBOARD
+              </h2>
+
+              <p>
+                Players ranked by final portfolio value.
+              </p>
+
+            </div>
+
+            {leaderboardLoading ? (
+
+              <div className="card leaderboard-loading">
+                LOADING...
+              </div>
+
+            ) : leaderboard.length === 0 ? (
+
+              <div className="card">
+                No players yet.
+              </div>
+
+            ) : (
+
+              <div className="leaderboard-list">
+
+                {leaderboard.map(
+                  (player, index) => (
+
+                    <div
+                      className={
+                        player.id ===
+                        currentPlayer.id
+                          ? 'leaderboard-row your-score'
+                          : 'leaderboard-row'
+                      }
+                      key={player.id}
+                    >
+
+                      <div className="rank">
+                        #{index + 1}
+                      </div>
+
+                      <div className="player-name">
+
+                        <strong>
+                          {player.username}
+                        </strong>
+
+                        {player.id ===
+                          currentPlayer.id && (
+                          <span>
+                            YOU
+                          </span>
+                        )}
+
+                      </div>
+
+                      <strong className="player-value">
+                        {formatMoney(
+                          player.score ||
+                            0
+                        )}
+                      </strong>
+
+                    </div>
+                  )
+                )}
+
+              </div>
+            )}
 
           </section>
         )}
 
       </main>
-
-    </div>
-  )
-}
-
-// =========================
-// PORTFOLIO GRAPH
-// =========================
-
-function PortfolioGraph({
-  values,
-}) {
-  if (!values || values.length === 0) {
-    return null
-  }
-
-  const width = 700
-  const height = 280
-  const padding = 45
-
-  const minValue =
-    Math.min(...values)
-
-  const maxValue =
-    Math.max(...values)
-
-  const range =
-    maxValue - minValue || 1
-
-  const points = values.map(
-    (value, index) => {
-      const x =
-        padding +
-        (index /
-          Math.max(
-            values.length - 1,
-            1
-          )) *
-          (width -
-            padding * 2)
-
-      const y =
-        height -
-        padding -
-        ((value - minValue) /
-          range) *
-          (height -
-            padding * 2)
-
-      return `${x},${y}`
-    }
-  )
-
-  return (
-    <div className="portfolio-chart">
-
-      <div className="chart-container">
-
-        <svg
-          className="portfolio-svg"
-          viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="none"
-        >
-
-          <polyline
-            points={points.join(' ')}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          {values.map(
-            (value, index) => {
-
-              const x =
-                padding +
-                (index /
-                  Math.max(
-                    values.length - 1,
-                    1
-                  )) *
-                  (width -
-                    padding * 2)
-
-              const y =
-                height -
-                padding -
-                ((value - minValue) /
-                  range) *
-                  (height -
-                    padding * 2)
-
-              return (
-                <circle
-                  key={index}
-                  cx={x}
-                  cy={y}
-                  r="7"
-                  fill="currentColor"
-                />
-              )
-            }
-          )}
-
-        </svg>
-
-      </div>
-
-      <div className="chart-values">
-
-        {values.map(
-          (value, index) => (
-            <span key={index}>
-              {index === 0
-                ? 'START'
-                : `ROUND ${index}`}
-              :{' '}
-              <strong>
-                {formatMoney(
-                  value
-                )}
-              </strong>
-            </span>
-          )
-        )}
-
-      </div>
 
     </div>
   )
