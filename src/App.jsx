@@ -1,4 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import "./App.css";
 
 const STARTING_CASH = 10000;
@@ -40,7 +45,9 @@ const STOCKS = [
 const ROUNDS = [
   {
     id: 1,
-    headline: "SUNVOLT WINS A MAJOR GOVERNMENT SOLAR CONTRACT",
+    headline:
+      "SUNVOLT WINS A MAJOR GOVERNMENT SOLAR CONTRACT",
+
     prices: {
       sunvolt: 150,
       fuelpower: 80,
@@ -48,15 +55,20 @@ const ROUNDS = [
       movemax: 120,
       medicore: 100,
     },
+
     reasons: {
       sunvolt:
         "The government contract increases SunVolt's expected business and future revenue.",
+
       fuelpower:
         "Greater dependence on solar energy reduces demand for traditional fuel.",
+
       foodrush:
         "Lower fuel costs reduce operating and cooking-related expenses, improving profits.",
+
       movemax:
         "Lower fuel costs reduce transportation expenses and encourage more vehicle use.",
+
       medicore:
         "The solar contract does not directly affect the healthcare sector.",
     },
@@ -64,7 +76,9 @@ const ROUNDS = [
 
   {
     id: 2,
-    headline: "GLOBAL OIL PRICES RISE SHARPLY",
+    headline:
+      "GLOBAL OIL PRICES RISE SHARPLY",
+
     prices: {
       sunvolt: 180,
       fuelpower: 120,
@@ -72,15 +86,20 @@ const ROUNDS = [
       movemax: 90,
       medicore: 100,
     },
+
     reasons: {
       sunvolt:
         "Higher fuel prices make solar power more attractive as an alternative energy source.",
+
       fuelpower:
         "Higher oil prices increase the value and revenue potential of fuel companies.",
+
       foodrush:
         "Higher fuel costs increase operating expenses, reducing expected profits.",
+
       movemax:
         "Higher fuel prices increase transportation costs and hurt the company's outlook.",
+
       medicore:
         "Oil prices have no major direct effect on healthcare demand.",
     },
@@ -90,6 +109,7 @@ const ROUNDS = [
     id: 3,
     headline:
       "GOVERNMENT BANS ENTRY OF DIESEL VEHICLES; EV VEHICLES WILL BE PAID TO OPERATE",
+
     prices: {
       sunvolt: 210,
       fuelpower: 80,
@@ -97,15 +117,20 @@ const ROUNDS = [
       movemax: 130,
       medicore: 100,
     },
+
     reasons: {
       sunvolt:
         "The shift toward EVs increases demand for electricity and supports renewable energy.",
+
       fuelpower:
         "The diesel ban reduces demand for traditional fuel and hurts fuel companies.",
+
       foodrush:
         "The policy has little direct effect on FoodRush's food business.",
+
       movemax:
         "Government support for EV operation increases demand while diesel competitors are restricted.",
+
       medicore:
         "The EV and diesel policy has no major direct effect on healthcare.",
     },
@@ -115,6 +140,7 @@ const ROUNDS = [
     id: 4,
     headline:
       "GOVERNMENT ANNOUNCES PETROL PRICES CUT BY 50% TO HELP COMMON PEOPLE",
+
     prices: {
       sunvolt: 150,
       fuelpower: 25,
@@ -122,53 +148,195 @@ const ROUNDS = [
       movemax: 130,
       medicore: 100,
     },
+
     reasons: {
       sunvolt:
         "Cheaper petrol makes traditional fuel more attractive, reducing demand for solar energy.",
+
       fuelpower:
         "The 50% petrol price cut reduces fuel prices and hurts the value of fuel companies.",
+
       foodrush:
         "Lower fuel costs reduce operating expenses, allowing FoodRush to earn higher profits.",
+
       movemax:
         "Cheaper petrol encourages more people to use vehicles, boosting transportation demand.",
+
       medicore:
         "The petrol price cut has no major direct effect on healthcare.",
     },
   },
 ];
 
+function createInitialPrices() {
+  const initial = {};
+
+  STOCKS.forEach((stock) => {
+    initial[stock.id] = stock.initialPrice;
+  });
+
+  return initial;
+}
+
+function createInitialHoldings() {
+  const initial = {};
+
+  STOCKS.forEach((stock) => {
+    initial[stock.id] = 0;
+  });
+
+  return initial;
+}
+
 function App() {
-  const [activeTab, setActiveTab] = useState("market");
+  /* =========================
+     AUTH
+  ========================= */
 
-  const [cash, setCash] = useState(STARTING_CASH);
-
-  const [prices, setPrices] = useState(() => {
-    const initial = {};
-
-    STOCKS.forEach((stock) => {
-      initial[stock.id] = stock.initialPrice;
-    });
-
-    return initial;
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem("stockMarketLoggedIn") === "true";
   });
 
-  const [holdings, setHoldings] = useState(() => {
-    const initial = {};
-
-    STOCKS.forEach((stock) => {
-      initial[stock.id] = 0;
-    });
-
-    return initial;
+  const [username, setUsername] = useState(() => {
+    return localStorage.getItem("stockMarketUsername") || "";
   });
+
+  const [authMode, setAuthMode] = useState("login");
+
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+
+  const handleAuth = (event) => {
+    event.preventDefault();
+
+    const cleanUsername = authUsername.trim();
+
+    if (!cleanUsername || !authPassword) {
+      setAuthMessage(
+        "Please enter both your username and password."
+      );
+      return;
+    }
+
+    if (authMode === "signup") {
+      localStorage.setItem(
+        "stockMarketUser",
+        JSON.stringify({
+          username: cleanUsername,
+          password: authPassword,
+        })
+      );
+
+      localStorage.setItem(
+        "stockMarketLoggedIn",
+        "true"
+      );
+
+      localStorage.setItem(
+        "stockMarketUsername",
+        cleanUsername
+      );
+
+      setUsername(cleanUsername);
+      setIsLoggedIn(true);
+      setAuthMessage("");
+      return;
+    }
+
+    const savedUser = localStorage.getItem(
+      "stockMarketUser"
+    );
+
+    if (!savedUser) {
+      setAuthMessage(
+        "No account found. Please create an account first."
+      );
+      return;
+    }
+
+    const user = JSON.parse(savedUser);
+
+    if (
+      user.username !== cleanUsername ||
+      user.password !== authPassword
+    ) {
+      setAuthMessage(
+        "Incorrect username or password."
+      );
+      return;
+    }
+
+    localStorage.setItem(
+      "stockMarketLoggedIn",
+      "true"
+    );
+
+    localStorage.setItem(
+      "stockMarketUsername",
+      cleanUsername
+    );
+
+    setUsername(cleanUsername);
+    setIsLoggedIn(true);
+    setAuthMessage("");
+  };
+
+  const logout = () => {
+    localStorage.removeItem(
+      "stockMarketLoggedIn"
+    );
+
+    localStorage.removeItem(
+      "stockMarketUsername"
+    );
+
+    setIsLoggedIn(false);
+    setUsername("");
+    setAuthUsername("");
+    setAuthPassword("");
+    setAuthMessage("");
+    setAuthMode("login");
+  };
+
+  /* =========================
+     GAME STATE
+  ========================= */
+
+  const [gameStarted, setGameStarted] =
+    useState(false);
+
+  const [activeTab, setActiveTab] =
+    useState("market");
+
+  const [cash, setCash] =
+    useState(STARTING_CASH);
+
+  const [prices, setPrices] = useState(
+    createInitialPrices
+  );
+
+  const [holdings, setHoldings] = useState(
+    createInitialHoldings
+  );
 
   const [round, setRound] = useState(1);
-  const [timeLeft, setTimeLeft] = useState(ROUND_TIME);
-  const [locked, setLocked] = useState(false);
-  const [roundResults, setRoundResults] = useState([]);
-  const [gameOver, setGameOver] = useState(false);
 
-  const [draggingStock, setDraggingStock] = useState(null);
+  const [timeLeft, setTimeLeft] =
+    useState(ROUND_TIME);
+
+  const [locked, setLocked] =
+    useState(false);
+
+  const [roundResults, setRoundResults] =
+    useState([]);
+
+  const [gameOver, setGameOver] =
+    useState(false);
+
+  const [draggingStock, setDraggingStock] =
+    useState(null);
+
   const [dragX, setDragX] = useState(0);
 
   const startX = useRef(0);
@@ -176,52 +344,62 @@ function App() {
 
   const currentRound = ROUNDS[round - 1];
 
+  /* =========================
+     PORTFOLIO VALUE
+  ========================= */
+
   const portfolioValue = useMemo(() => {
     return STOCKS.reduce(
       (total, stock) =>
-        total + holdings[stock.id] * prices[stock.id],
+        total +
+        holdings[stock.id] *
+          prices[stock.id],
       cash
     );
   }, [cash, holdings, prices]);
 
-  const startingPortfolioValue = STARTING_CASH;
-
   const profitLoss =
-    portfolioValue - startingPortfolioValue;
+    portfolioValue - STARTING_CASH;
 
-  const portfolioHistory = useMemo(() => {
-    const history = [
-      {
-        round: 0,
-        value: STARTING_CASH,
-      },
-    ];
+  /* =========================
+     START GAME
+  ========================= */
 
-    roundResults.forEach((result) => {
-      history.push({
-        round: result.round,
-        value: result.portfolioValue,
-      });
-    });
+  const startGame = () => {
+    setCash(STARTING_CASH);
+    setPrices(createInitialPrices());
+    setHoldings(createInitialHoldings());
+    setRound(1);
+    setTimeLeft(ROUND_TIME);
+    setLocked(false);
+    setRoundResults([]);
+    setGameOver(false);
+    setActiveTab("market");
+    setDraggingStock(null);
+    setDragX(0);
+    setGameStarted(true);
+  };
 
-    if (!gameOver && roundResults.length === 0) {
-      history.push({
-        round: 1,
-        value: portfolioValue,
-      });
-    }
-
-    return history;
-  }, [roundResults, portfolioValue, gameOver]);
+  /* =========================
+     TIMER
+  ========================= */
 
   useEffect(() => {
-    if (locked || gameOver) return;
+    if (
+      !gameStarted ||
+      locked ||
+      gameOver
+    ) {
+      return;
+    }
 
     const timer = setInterval(() => {
       setTimeLeft((previous) => {
         if (previous <= 1) {
           clearInterval(timer);
+
           lockRound();
+
           return 0;
         }
 
@@ -230,14 +408,26 @@ function App() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [locked, gameOver, round]);
+  }, [
+    gameStarted,
+    locked,
+    gameOver,
+    round,
+  ]);
+
+  /* =========================
+     LOCK ROUND
+  ========================= */
 
   const lockRound = () => {
-    if (locked || gameOver) return;
+    if (locked || gameOver) {
+      return;
+    }
 
     setLocked(true);
 
-    const revealedPrices = currentRound.prices;
+    const revealedPrices =
+      currentRound.prices;
 
     setPrices(revealedPrices);
 
@@ -255,8 +445,14 @@ function App() {
     }
   };
 
+  /* =========================
+     NEXT ROUND
+  ========================= */
+
   const nextRound = () => {
-    if (!locked || gameOver) return;
+    if (!locked || gameOver) {
+      return;
+    }
 
     if (round >= ROUNDS.length) {
       setGameOver(true);
@@ -272,38 +468,79 @@ function App() {
     setActiveTab("market");
   };
 
+  /* =========================
+     BUY
+  ========================= */
+
   const buyOne = (stockId) => {
-    if (locked || gameOver) return;
+    if (locked || gameOver) {
+      return;
+    }
 
     const price = prices[stockId];
 
-    if (cash < price) return;
+    if (cash < price) {
+      return;
+    }
 
-    setCash((previous) => previous - price);
+    setCash(
+      (previous) => previous - price
+    );
 
     setHoldings((previous) => ({
       ...previous,
-      [stockId]: previous[stockId] + 1,
+      [stockId]:
+        previous[stockId] + 1,
     }));
   };
+
+  /* =========================
+     SELL
+  ========================= */
 
   const sellOne = (stockId) => {
-    if (locked || gameOver) return;
+    if (locked || gameOver) {
+      return;
+    }
 
-    if (holdings[stockId] <= 0) return;
+    if (holdings[stockId] <= 0) {
+      return;
+    }
 
     const price = prices[stockId];
 
-    setCash((previous) => previous + price);
+    setCash(
+      (previous) => previous + price
+    );
 
     setHoldings((previous) => ({
       ...previous,
-      [stockId]: previous[stockId] - 1,
+      [stockId]:
+        previous[stockId] - 1,
     }));
   };
 
-  const handlePointerDown = (event, stockId) => {
-    if (locked || gameOver) return;
+  /* =========================
+     HOLD
+  ========================= */
+
+  const holdStock = () => {
+    if (locked || gameOver) {
+      return;
+    }
+  };
+
+  /* =========================
+     SWIPE
+  ========================= */
+
+  const handlePointerDown = (
+    event,
+    stockId
+  ) => {
+    if (locked || gameOver) {
+      return;
+    }
 
     startX.current = event.clientX;
     currentX.current = event.clientX;
@@ -316,23 +553,32 @@ function App() {
   };
 
   const handlePointerMove = (event) => {
-    if (!draggingStock) return;
+    if (!draggingStock) {
+      return;
+    }
 
     currentX.current = event.clientX;
 
     const distance =
-      currentX.current - startX.current;
+      currentX.current -
+      startX.current;
 
     setDragX(
-      Math.max(-150, Math.min(150, distance))
+      Math.max(
+        -150,
+        Math.min(150, distance)
+      )
     );
   };
 
   const handlePointerUp = () => {
-    if (!draggingStock) return;
+    if (!draggingStock) {
+      return;
+    }
 
     const distance =
-      currentX.current - startX.current;
+      currentX.current -
+      startX.current;
 
     if (distance >= 80) {
       buyOne(draggingStock);
@@ -344,6 +590,10 @@ function App() {
     setDragX(0);
   };
 
+  /* =========================
+     GRAPH
+  ========================= */
+
   const renderGraph = () => {
     const history =
       roundResults.length > 0
@@ -352,10 +602,13 @@ function App() {
               round: 0,
               value: STARTING_CASH,
             },
-            ...roundResults.map((item) => ({
-              round: item.round,
-              value: item.portfolioValue,
-            })),
+            ...roundResults.map(
+              (item) => ({
+                round: item.round,
+                value:
+                  item.portfolioValue,
+              })
+            ),
           ]
         : [
             {
@@ -395,14 +648,17 @@ function App() {
             : padding +
               (index /
                 (history.length - 1)) *
-                (width - padding * 2);
+                (width -
+                  padding * 2);
 
         const y =
           height -
           padding -
-          ((item.value - minValue) /
+          ((item.value -
+            minValue) /
             range) *
-            (height - padding * 2);
+            (height -
+              padding * 2);
 
         return {
           ...item,
@@ -415,7 +671,11 @@ function App() {
     const path = points
       .map(
         (point, index) =>
-          `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`
+          `${
+            index === 0
+              ? "M"
+              : "L"
+          } ${point.x} ${point.y}`
       )
       .join(" ");
 
@@ -473,14 +733,229 @@ function App() {
     );
   };
 
+  /* =========================
+     LOGIN SCREEN
+  ========================= */
+
+  if (!isLoggedIn) {
+    return (
+      <div className="app">
+        <div className="auth-container">
+          <div className="auth-card">
+            <div className="auth-logo">
+              ₹
+            </div>
+
+            <h1>
+              Stock Market Live
+            </h1>
+
+            <p className="auth-subtitle">
+              Learn. Trade. Compete.
+            </p>
+
+            <div className="auth-tabs">
+              <button
+                className={
+                  authMode === "login"
+                    ? "auth-tab active"
+                    : "auth-tab"
+                }
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthMessage("");
+                }}
+              >
+                Login
+              </button>
+
+              <button
+                className={
+                  authMode === "signup"
+                    ? "auth-tab active"
+                    : "auth-tab"
+                }
+                onClick={() => {
+                  setAuthMode("signup");
+                  setAuthMessage("");
+                }}
+              >
+                Sign Up
+              </button>
+            </div>
+
+            <form
+              className="auth-form"
+              onSubmit={handleAuth}
+            >
+              <label>
+                Username
+              </label>
+
+              <input
+                type="text"
+                placeholder="Enter username"
+                value={authUsername}
+                onChange={(event) =>
+                  setAuthUsername(
+                    event.target.value
+                  )
+                }
+              />
+
+              <label>
+                Password
+              </label>
+
+              <input
+                type="password"
+                placeholder="Enter password"
+                value={authPassword}
+                onChange={(event) =>
+                  setAuthPassword(
+                    event.target.value
+                  )
+                }
+              />
+
+              {authMessage && (
+                <div className="auth-message">
+                  {authMessage}
+                </div>
+              )}
+
+              <button
+                className="auth-submit"
+                type="submit"
+              >
+                {authMode === "login"
+                  ? "LOGIN"
+                  : "CREATE ACCOUNT"}
+              </button>
+            </form>
+
+            <p className="auth-note">
+              Your account is saved on this
+              device.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* =========================
+     GAME START SCREEN
+  ========================= */
+
+  if (!gameStarted) {
+    return (
+      <div className="app">
+        <div className="game-start">
+          <div className="game-logo">
+            ₹
+          </div>
+
+          <h1>
+            Stock Market Live
+          </h1>
+
+          <p className="player-welcome">
+            Welcome,{" "}
+            <strong>{username}</strong>
+          </p>
+
+          <div className="starting-capital">
+            <span>
+              STARTING CAPITAL
+            </span>
+
+            <strong>
+              ₹10,000
+            </strong>
+          </div>
+
+          <div className="game-rules-preview">
+            <div>
+              <strong>
+                4 ROUNDS
+              </strong>
+
+              <span>
+                Complete the full market
+              </span>
+            </div>
+
+            <div>
+              <strong>
+                30 SECONDS
+              </strong>
+
+              <span>
+                Decide before time runs out
+              </span>
+            </div>
+
+            <div>
+              <strong>
+                5 STOCKS
+              </strong>
+
+              <span>
+                Diversify your portfolio
+              </span>
+            </div>
+
+            <div>
+              <strong>
+                SWIPE
+              </strong>
+
+              <span>
+                Buy, sell or hold
+              </span>
+            </div>
+          </div>
+
+          <button
+            className="start-game-button"
+            onClick={startGame}
+          >
+            START GAME
+          </button>
+
+          <button
+            className="logout-button"
+            onClick={logout}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* =========================
+     FINAL SCREEN
+  ========================= */
+
   if (gameOver) {
     return (
       <div className="app">
         <div className="final-screen">
-          <h1>Stock Market Live</h1>
+          <h1>
+            Stock Market Live
+          </h1>
+
+          <p className="player-welcome">
+            Well played,{" "}
+            <strong>{username}</strong>
+          </p>
 
           <div className="final-card">
-            <span>FINAL PORTFOLIO VALUE</span>
+            <span>
+              FINAL PORTFOLIO VALUE
+            </span>
 
             <strong>
               ₹
@@ -496,7 +971,9 @@ function App() {
                   : "negative final-profit"
               }
             >
-              {profitLoss >= 0 ? "+" : ""}
+              {profitLoss >= 0
+                ? "+"
+                : ""}
               ₹
               {profitLoss.toLocaleString(
                 "en-IN"
@@ -515,9 +992,17 @@ function App() {
                 key={stock.id}
               >
                 <div>
-                  <strong>{stock.name}</strong>
+                  <strong>
+                    {stock.name}
+                  </strong>
+
                   <span>
-                    {holdings[stock.id]} shares
+                    {
+                      holdings[
+                        stock.id
+                      ]
+                    }{" "}
+                    shares
                   </span>
                 </div>
 
@@ -525,22 +1010,48 @@ function App() {
                   <strong>
                     ₹
                     {(
-                      holdings[stock.id] *
-                      prices[stock.id]
-                    ).toLocaleString("en-IN")}
+                      holdings[
+                        stock.id
+                      ] *
+                      prices[
+                        stock.id
+                      ]
+                    ).toLocaleString(
+                      "en-IN"
+                    )}
                   </strong>
 
                   <span>
-                    ₹{prices[stock.id]} / share
+                    ₹
+                    {prices[stock.id]}{" "}
+                    / share
                   </span>
                 </div>
               </div>
             ))}
           </div>
+
+          <button
+            className="start-game-button"
+            onClick={startGame}
+          >
+            PLAY AGAIN
+          </button>
+
+          <button
+            className="logout-button"
+            onClick={logout}
+          >
+            Logout
+          </button>
         </div>
       </div>
     );
   }
+
+  /* =========================
+     MAIN GAME
+  ========================= */
 
   return (
     <div className="app">
@@ -550,23 +1061,35 @@ function App() {
             STOCK MARKET LIVE
           </span>
 
-          <h1>Stock Market Live</h1>
+          <h1>
+            Stock Market Live
+          </h1>
 
           <p>
-            Round {round} of {ROUNDS.length}
+            Welcome, {username} · Round{" "}
+            {round} of {ROUNDS.length}
           </p>
         </div>
 
         <div className="header-stats">
           <div>
-            <span>CASH</span>
+            <span>
+              CASH
+            </span>
+
             <strong>
-              ₹{cash.toLocaleString("en-IN")}
+              ₹
+              {cash.toLocaleString(
+                "en-IN"
+              )}
             </strong>
           </div>
 
           <div>
-            <span>PORTFOLIO</span>
+            <span>
+              PORTFOLIO
+            </span>
+
             <strong>
               ₹
               {portfolioValue.toLocaleString(
@@ -632,21 +1155,28 @@ function App() {
 
               <p>
                 Analyse the market and make
-                your decisions before the timer
-                ends.
+                your decisions before the
+                timer ends.
               </p>
             </div>
 
             <div className="trading-status">
               <div>
-                <span>ROUND</span>
+                <span>
+                  ROUND
+                </span>
+
                 <strong>
-                  {round} / {ROUNDS.length}
+                  {round} /{" "}
+                  {ROUNDS.length}
                 </strong>
               </div>
 
               <div>
-                <span>DECISIONS</span>
+                <span>
+                  DECISIONS
+                </span>
+
                 <strong>
                   {locked
                     ? "LOCKED"
@@ -655,7 +1185,10 @@ function App() {
               </div>
 
               <div className="timer-box">
-                <span>TIME LEFT</span>
+                <span>
+                  TIME LEFT
+                </span>
+
                 <strong>
                   {timeLeft}s
                 </strong>
@@ -717,11 +1250,13 @@ function App() {
                           : ""
                       }`}
                       style={{
-                        transform: isDragging
-                          ? `translateX(${dragX}px) rotate(${
-                              dragX / 30
-                            }deg)`
-                          : "translateX(0)",
+                        transform:
+                          isDragging
+                            ? `translateX(${dragX}px) rotate(${
+                                dragX /
+                                30
+                              }deg)`
+                            : "translateX(0)",
                       }}
                       onPointerDown={(
                         event
@@ -780,7 +1315,8 @@ function App() {
 
                           <strong
                             className={
-                              difference > 0
+                              difference >
+                              0
                                 ? "price-up"
                                 : difference <
                                   0
@@ -795,18 +1331,15 @@ function App() {
 
                       <div className="hold-row">
                         <button
-                          className={
-                            "hold-button " +
-                            (false
-                              ? "active"
-                              : "")
-                          }
+                          className="hold-button"
                           onPointerDown={(
                             event
                           ) =>
                             event.stopPropagation()
                           }
-                          onClick={() => {}}
+                          onClick={
+                            holdStock
+                          }
                         >
                           HOLD
                         </button>
@@ -858,7 +1391,9 @@ function App() {
               {!locked ? (
                 <button
                   className="lock-button"
-                  onClick={lockRound}
+                  onClick={
+                    lockRound
+                  }
                 >
                   LOCK DECISIONS
                 </button>
@@ -866,7 +1401,9 @@ function App() {
                 ROUNDS.length ? (
                 <button
                   className="primary-button"
-                  onClick={nextRound}
+                  onClick={
+                    nextRound
+                  }
                 >
                   NEXT ROUND
                 </button>
@@ -881,8 +1418,8 @@ function App() {
                   </h2>
 
                   <p>
-                    Your final portfolio is
-                    ready.
+                    Your final portfolio
+                    is ready.
                   </p>
                 </div>
               )}
@@ -890,7 +1427,8 @@ function App() {
           </>
         )}
 
-        {activeTab === "portfolio" && (
+        {activeTab ===
+          "portfolio" && (
           <main className="portfolio-page">
             <div className="portfolio-top">
               <div>
@@ -913,7 +1451,9 @@ function App() {
                     : "profit-box negative"
                 }
               >
-                {profitLoss >= 0 ? "+" : ""}
+                {profitLoss >= 0
+                  ? "+"
+                  : ""}
                 ₹
                 {profitLoss.toLocaleString(
                   "en-IN"
@@ -937,7 +1477,9 @@ function App() {
 
             <div className="portfolio-stats">
               <div>
-                <span>CASH</span>
+                <span>
+                  CASH
+                </span>
 
                 <strong>
                   ₹
@@ -948,7 +1490,9 @@ function App() {
               </div>
 
               <div>
-                <span>PROFIT / LOSS</span>
+                <span>
+                  PROFIT / LOSS
+                </span>
 
                 <strong
                   className={
@@ -980,7 +1524,11 @@ function App() {
                     </strong>
 
                     <span>
-                      {holdings[stock.id]}{" "}
+                      {
+                        holdings[
+                          stock.id
+                        ]
+                      }{" "}
                       shares
                     </span>
                   </div>
@@ -1002,7 +1550,9 @@ function App() {
 
                     <span>
                       ₹
-                      {prices[stock.id]}{" "}
+                      {prices[
+                        stock.id
+                      ]}{" "}
                       / share
                     </span>
                   </div>
@@ -1012,18 +1562,21 @@ function App() {
           </main>
         )}
 
-        {activeTab === "leaderboard" && (
+        {activeTab ===
+          "leaderboard" && (
           <main className="leaderboard">
             <div className="leaderboard-heading">
               <span className="section-label">
                 MARKET RANKINGS
               </span>
 
-              <h2>Leaderboard</h2>
+              <h2>
+                Leaderboard
+              </h2>
 
               <p>
-                Compare your portfolio with
-                other investors.
+                Compare your portfolio
+                with other investors.
               </p>
             </div>
 
@@ -1035,7 +1588,7 @@ function App() {
 
                 <div className="player-name">
                   <strong>
-                    You
+                    {username}
                   </strong>
 
                   <span>

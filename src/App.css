@@ -1385,3 +1385,56 @@ button {
     font-size: 32px;
   }
 }
+/* =========================
+   AUTH / GAME EXTRAS
+========================= */
+
+.auth-logo {
+  color: white;
+}
+
+.auth-submit {
+  cursor: pointer;
+}
+
+.auth-submit:hover {
+  background: #16a34a;
+}
+
+.sell-guide {
+  color: #f87171;
+}
+
+.buy-guide {
+  color: #4ade80;
+}
+
+.hold-guide {
+  color: #60a5fa;
+}
+
+.lock-area {
+  margin-top: 20px;
+}
+
+.swipe-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.75);
+  font-size: 32px;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.buy-overlay {
+  color: #4ade80;
+}
+
+.sell-overlay {
+  color: #f87171;
+}
