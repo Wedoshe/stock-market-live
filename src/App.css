@@ -1438,3 +1438,43 @@ button {
 .sell-overlay {
   color: #f87171;
 }
+/* =========================
+   FIX: ROUND REVEAL LAYOUT
+========================= */
+
+/* Keep swipe hints strictly inside trading cards */
+.swipe-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Prevent green/red swipe backgrounds from affecting
+   anything outside the trading card */
+.swipe-hint {
+  z-index: 0;
+}
+
+/* Trading card must stay completely above the hints */
+.trading-card {
+  z-index: 2;
+}
+
+/* Reveal section must always appear clean and above
+   any leftover swipe UI */
+.reveal-section {
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* Make sure reveal text never gets covered */
+.reveal-section * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hide swipe UI when it isn't actually needed */
+.reveal-section .swipe-hint,
+.reveal-section .swipe-overlay {
+  display: none;
+}
