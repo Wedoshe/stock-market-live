@@ -1472,6 +1472,24 @@ button {
   position: relative;
   z-index: 1;
 }
+.swipe-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.75);
+  font-size: 32px;
+  font-weight: 900;
+  pointer-events: none;
+}
 
+.buy-overlay {
+  color: #4ade80;
+}
 
+.sell-overlay {
+  color: #f87171;
 }
