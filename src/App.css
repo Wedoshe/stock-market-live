@@ -1473,8 +1473,5 @@ button {
   z-index: 1;
 }
 
-/* Hide swipe UI when it isn't actually needed */
-.reveal-section .swipe-hint,
-.reveal-section .swipe-overlay {
-  display: none;
+
 }

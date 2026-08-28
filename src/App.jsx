@@ -194,11 +194,17 @@ function App() {
   ========================= */
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem("stockMarketLoggedIn") === "true";
+    return (
+      localStorage.getItem("stockMarketLoggedIn") ===
+      "true"
+    );
   });
 
   const [username, setUsername] = useState(() => {
-    return localStorage.getItem("stockMarketUsername") || "";
+    return (
+      localStorage.getItem("stockMarketUsername") ||
+      ""
+    );
   });
 
   const [authMode, setAuthMode] = useState("login");
@@ -459,7 +465,8 @@ function App() {
       return;
     }
 
-    const nextRoundNumber = round + 1;
+    const nextRoundNumber =
+      round + 1;
 
     setRound(nextRoundNumber);
     setTimeLeft(ROUND_TIME);
@@ -484,7 +491,8 @@ function App() {
     }
 
     setCash(
-      (previous) => previous - price
+      (previous) =>
+        previous - price
     );
 
     setHoldings((previous) => ({
@@ -510,7 +518,8 @@ function App() {
     const price = prices[stockId];
 
     setCash(
-      (previous) => previous + price
+      (previous) =>
+        previous + price
     );
 
     setHoldings((previous) => ({
@@ -542,8 +551,11 @@ function App() {
       return;
     }
 
-    startX.current = event.clientX;
-    currentX.current = event.clientX;
+    startX.current =
+      event.clientX;
+
+    currentX.current =
+      event.clientX;
 
     setDraggingStock(stockId);
 
@@ -552,12 +564,15 @@ function App() {
     );
   };
 
-  const handlePointerMove = (event) => {
+  const handlePointerMove = (
+    event
+  ) => {
     if (!draggingStock) {
       return;
     }
 
-    currentX.current = event.clientX;
+    currentX.current =
+      event.clientX;
 
     const distance =
       currentX.current -
@@ -1195,21 +1210,30 @@ function App() {
               </div>
             </div>
 
-            <div className="swipe-instructions">
-              <span className="sell-guide">
-                SWIPE LEFT TO SELL
-              </span>
+            {/* SWIPE INSTRUCTIONS ONLY DURING TRADING */}
+            {!locked && (
+              <div className="swipe-instructions">
+                <span className="sell-guide">
+                  SWIPE LEFT TO SELL
+                </span>
 
-              <span className="hold-guide">
-                HOLD
-              </span>
+                <span className="hold-guide">
+                  HOLD
+                </span>
 
-              <span className="buy-guide">
-                SWIPE RIGHT TO BUY
-              </span>
-            </div>
+                <span className="buy-guide">
+                  SWIPE RIGHT TO BUY
+                </span>
+              </div>
+            )}
 
-            <div className="trading-list">
+            <div
+              className={
+                locked
+                  ? "trading-list locked-trading-list"
+                  : "trading-list"
+              }
+            >
               {STOCKS.map((stock) => {
                 const price =
                   prices[stock.id];
@@ -1228,16 +1252,25 @@ function App() {
 
                 return (
                   <div
-                    className="swipe-wrapper"
+                    className={
+                      locked
+                        ? "swipe-wrapper locked-wrapper"
+                        : "swipe-wrapper"
+                    }
                     key={stock.id}
                   >
-                    <div className="swipe-hint buy-hint">
-                      BUY
-                    </div>
+                    {/* SWIPE HINTS ONLY DURING TRADING */}
+                    {!locked && (
+                      <>
+                        <div className="swipe-hint buy-hint">
+                          BUY
+                        </div>
 
-                    <div className="swipe-hint sell-hint">
-                      SELL
-                    </div>
+                        <div className="swipe-hint sell-hint">
+                          SELL
+                        </div>
+                      </>
+                    )}
 
                     <div
                       className={`trading-card ${
@@ -1251,6 +1284,7 @@ function App() {
                       }`}
                       style={{
                         transform:
+                          !locked &&
                           isDragging
                             ? `translateX(${dragX}px) rotate(${
                                 dragX /
@@ -1258,22 +1292,29 @@ function App() {
                               }deg)`
                             : "translateX(0)",
                       }}
-                      onPointerDown={(
-                        event
-                      ) =>
-                        handlePointerDown(
-                          event,
-                          stock.id
-                        )
+                      onPointerDown={
+                        !locked
+                          ? (event) =>
+                              handlePointerDown(
+                                event,
+                                stock.id
+                              )
+                          : undefined
                       }
                       onPointerMove={
-                        handlePointerMove
+                        !locked
+                          ? handlePointerMove
+                          : undefined
                       }
                       onPointerUp={
-                        handlePointerUp
+                        !locked
+                          ? handlePointerUp
+                          : undefined
                       }
                       onPointerCancel={
-                        handlePointerUp
+                        !locked
+                          ? handlePointerUp
+                          : undefined
                       }
                     >
                       <div className="trading-card-top">
@@ -1329,41 +1370,47 @@ function App() {
                         </div>
                       </div>
 
-                      <div className="hold-row">
-                        <button
-                          className="hold-button"
-                          onPointerDown={(
-                            event
-                          ) =>
-                            event.stopPropagation()
-                          }
-                          onClick={
-                            holdStock
-                          }
-                        >
-                          HOLD
-                        </button>
-                      </div>
-
-                      {isDragging && (
-                        <div
-                          className={
-                            dragX > 0
-                              ? "swipe-overlay buy-overlay"
-                              : dragX < 0
-                              ? "swipe-overlay sell-overlay"
-                              : "swipe-overlay"
-                          }
-                        >
-                          {dragX > 0
-                            ? "BUY"
-                            : dragX < 0
-                            ? "SELL"
-                            : "HOLD"}
+                      {/* HOLD BUTTON ONLY DURING TRADING */}
+                      {!locked && (
+                        <div className="hold-row">
+                          <button
+                            className="hold-button"
+                            onPointerDown={(
+                              event
+                            ) =>
+                              event.stopPropagation()
+                            }
+                            onClick={
+                              holdStock
+                            }
+                          >
+                            HOLD
+                          </button>
                         </div>
                       )}
+
+                      {/* SWIPE OVERLAY ONLY DURING TRADING */}
+                      {!locked &&
+                        isDragging && (
+                          <div
+                            className={
+                              dragX > 0
+                                ? "swipe-overlay buy-overlay"
+                                : dragX < 0
+                                ? "swipe-overlay sell-overlay"
+                                : "swipe-overlay"
+                            }
+                          >
+                            {dragX > 0
+                              ? "BUY"
+                              : dragX < 0
+                              ? "SELL"
+                              : "HOLD"}
+                          </div>
+                        )}
                     </div>
 
+                    {/* REASON ONLY AFTER LOCK */}
                     {locked && (
                       <div className="reason-list">
                         <div className="reason-row">
